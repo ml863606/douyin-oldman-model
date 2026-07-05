@@ -78,6 +78,7 @@ import com.xyz.aitool.data.HitRepository
 import com.xyz.aitool.data.MonitorTarget
 import com.xyz.aitool.data.OperationLog
 import com.xyz.aitool.data.ParsedVideoLog
+import com.xyz.aitool.data.RecognitionMode
 import com.xyz.aitool.data.RiskHit
 import com.xyz.aitool.data.RuleTarget
 import kotlinx.coroutines.delay
@@ -116,6 +117,7 @@ private fun AppScreen() {
     var alertMessage by remember { mutableStateOf(HitRepository.getAlertMessage(context)) }
     var alertAction by remember { mutableStateOf(HitRepository.getAlertAction(context)) }
     var alertSize by remember { mutableStateOf(HitRepository.getAlertSize(context)) }
+    var recognitionMode by remember { mutableStateOf(HitRepository.getRecognitionMode(context)) }
     var warningFontSize by remember { mutableStateOf(HitRepository.getWarningFontSize(context)) }
     var debugModeEnabled by remember { mutableStateOf(HitRepository.isDebugModeEnabled(context)) }
     var onboardingVisible by remember { mutableStateOf(!HitRepository.isOnboardingCompleted(context)) }
@@ -139,6 +141,7 @@ private fun AppScreen() {
         alertMessage = HitRepository.getAlertMessage(context)
         alertAction = HitRepository.getAlertAction(context)
         alertSize = HitRepository.getAlertSize(context)
+        recognitionMode = HitRepository.getRecognitionMode(context)
         warningFontSize = HitRepository.getWarningFontSize(context)
         debugModeEnabled = HitRepository.isDebugModeEnabled(context)
         batteryOptimized = !context.isIgnoringBatteryOptimizations()
@@ -191,6 +194,7 @@ private fun AppScreen() {
             monitorTargets = context.loadMonitorTargets()
             alertAction = HitRepository.getAlertAction(context)
             alertSize = HitRepository.getAlertSize(context)
+            recognitionMode = HitRepository.getRecognitionMode(context)
             warningFontSize = HitRepository.getWarningFontSize(context)
             debugModeEnabled = HitRepository.isDebugModeEnabled(context)
             batteryOptimized = !context.isIgnoringBatteryOptimizations()
@@ -286,6 +290,7 @@ private fun AppScreen() {
                     alertMessage = alertMessage,
                     alertAction = alertAction,
                     alertSize = alertSize,
+                    recognitionMode = recognitionMode,
                     warningFontSize = warningFontSize,
                     debugModeEnabled = debugModeEnabled,
                     appSelectorExpanded = appSelectorExpanded,
@@ -310,6 +315,10 @@ private fun AppScreen() {
                     onAlertSizeChanged = { size ->
                         alertSize = size
                         HitRepository.setAlertSize(context, size)
+                    },
+                    onRecognitionModeChanged = { mode ->
+                        recognitionMode = mode
+                        HitRepository.setRecognitionMode(context, mode)
                     },
                     onWarningFontSizeChanged = { size ->
                         warningFontSize = size
@@ -347,6 +356,10 @@ private fun AppScreen() {
                     onAddTextRule = {
                         HitRepository.addCustomRule(context, RuleTarget.TEXT, textRuleText)
                         textRuleText = ""
+                        customRules = HitRepository.getCustomRules(context)
+                    },
+                    onUpdateRule = { id, target, keyword ->
+                        HitRepository.updateCustomRule(context, id, target, keyword)
                         customRules = HitRepository.getCustomRules(context)
                     },
                     onRemoveRule = { id ->
@@ -715,6 +728,33 @@ fun AlertSizeButton(
 }
 
 @Composable
+fun RecognitionModeButton(
+    mode: RecognitionMode,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: (RecognitionMode) -> Unit,
+) {
+    val contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp)
+    if (selected) {
+        Button(
+            modifier = modifier,
+            contentPadding = contentPadding,
+            onClick = { onClick(mode) },
+        ) {
+            Text(mode.label, maxLines = 1, softWrap = false, fontSize = 13.sp)
+        }
+    } else {
+        OutlinedButton(
+            modifier = modifier,
+            contentPadding = contentPadding,
+            onClick = { onClick(mode) },
+        ) {
+            Text(mode.label, maxLines = 1, softWrap = false, fontSize = 13.sp)
+        }
+    }
+}
+
+@Composable
 fun StateButton(
     label: String,
     active: Boolean,
@@ -800,6 +840,7 @@ fun CustomRulesCard(
     onAddTitleRule: () -> Unit,
     onAddTagRule: () -> Unit,
     onAddTextRule: () -> Unit,
+    onUpdateRule: (Long, RuleTarget, String) -> Unit,
     onRemoveRule: (Long) -> Unit,
 ) {
     Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -852,7 +893,11 @@ fun CustomRulesCard(
                     Text("暂无自定义规则", color = Color(0xFF94A3B8), style = MaterialTheme.typography.bodySmall)
                 } else {
                     customRules.forEach { rule ->
-                        RuleRow(rule = rule, onRemoveRule = onRemoveRule)
+                        RuleRow(
+                            rule = rule,
+                            onUpdateRule = onUpdateRule,
+                            onRemoveRule = onRemoveRule,
+                        )
                     }
                 }
             }
@@ -886,7 +931,72 @@ fun RuleInputRow(
 }
 
 @Composable
-fun RuleRow(rule: CustomRule, onRemoveRule: (Long) -> Unit) {
+fun RuleRow(
+    rule: CustomRule,
+    onUpdateRule: (Long, RuleTarget, String) -> Unit,
+    onRemoveRule: (Long) -> Unit,
+) {
+    var editing by remember(rule.id) { mutableStateOf(false) }
+    var editedTarget by remember(rule.id, rule.target) { mutableStateOf(rule.target) }
+    var editedKeyword by remember(rule.id, rule.keyword) { mutableStateOf(rule.keyword) }
+
+    if (editing) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                RuleTarget.entries.forEach { target ->
+                    val modifier = Modifier.weight(1f)
+                    if (editedTarget == target) {
+                        Button(modifier = modifier, onClick = { editedTarget = target }) {
+                            Text(target.label, maxLines = 1, softWrap = false)
+                        }
+                    } else {
+                        OutlinedButton(modifier = modifier, onClick = { editedTarget = target }) {
+                            Text(target.label, maxLines = 1, softWrap = false)
+                        }
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = editedKeyword,
+                onValueChange = { editedKeyword = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("${editedTarget.label}包含") },
+                singleLine = true,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(
+                    onClick = {
+                        editedTarget = rule.target
+                        editedKeyword = rule.keyword
+                        editing = false
+                    },
+                ) {
+                    Text("取消")
+                }
+                Button(
+                    onClick = {
+                        onUpdateRule(rule.id, editedTarget, editedKeyword)
+                        editing = false
+                    },
+                    enabled = editedKeyword.isNotBlank(),
+                ) {
+                    Text("保存")
+                }
+            }
+        }
+        return
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -895,6 +1005,9 @@ fun RuleRow(rule: CustomRule, onRemoveRule: (Long) -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text("${rule.target.label}包含：${rule.keyword}", fontWeight = FontWeight.SemiBold)
             Text("自定义规则", color = Color(0xFF64748B), style = MaterialTheme.typography.bodySmall)
+        }
+        TextButton(onClick = { editing = true }) {
+            Text("编辑")
         }
         TextButton(onClick = { onRemoveRule(rule.id) }) {
             Text("删除")
@@ -923,7 +1036,17 @@ fun HitCard(hit: RiskHit) {
                 style = MaterialTheme.typography.bodySmall,
             )
             Text(
-                text = DateFormat.format("MM-dd HH:mm:ss", hit.timeMillis).toString(),
+                text = "记录时间：${DateFormat.format("MM-dd HH:mm:ss", hit.timeMillis)}",
+                color = Color(0xFF94A3B8),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = "OCR识别耗时：${hit.ocrDurationMillis.ocrDurationLabel()}",
+                color = Color(0xFF94A3B8),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = "识别范围：${hit.source.recognitionRangeLabel()}",
                 color = Color(0xFF94A3B8),
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -989,6 +1112,21 @@ fun VideoLogCard(log: ParsedVideoLog) {
                 )
             }
             Text(
+                text = "OCR识别耗时：${log.ocrDurationMillis.ocrDurationLabel()}",
+                color = Color(0xFF94A3B8),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = "识别范围：${log.source.recognitionRangeLabel()}",
+                color = Color(0xFF94A3B8),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = "作者：${log.author.ifBlank { "未解析到" }}",
+                color = Color(0xFF475569),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
                 text = "标题：${log.title.ifBlank { "未解析到" }}",
                 fontWeight = FontWeight.SemiBold,
             )
@@ -1027,6 +1165,22 @@ fun OperationLogCard(log: OperationLog) {
             }
             Text(log.message, color = Color(0xFF334155), style = MaterialTheme.typography.bodyMedium)
         }
+    }
+}
+
+private fun String.recognitionRangeLabel(): String {
+    return when {
+        contains("OCR", ignoreCase = true) -> "屏幕底部 1/3 文案区域（左侧 90%）"
+        contains("无障碍", ignoreCase = true) -> "当前屏幕可见文字"
+        else -> this.ifBlank { "未知范围" }
+    }
+}
+
+private fun Long?.ocrDurationLabel(): String {
+    return if (this == null) {
+        "未使用 OCR"
+    } else {
+        String.format(java.util.Locale.US, "%.2f 秒", this / 1000.0)
     }
 }
 

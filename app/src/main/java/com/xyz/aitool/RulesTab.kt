@@ -24,6 +24,8 @@ import com.xyz.aitool.data.AlertAction
 import com.xyz.aitool.data.AlertSize
 import com.xyz.aitool.data.CustomRule
 import com.xyz.aitool.data.MonitorTarget
+import com.xyz.aitool.data.RecognitionMode
+import com.xyz.aitool.data.RuleTarget
 
 @Composable
 fun RulesTab(
@@ -31,6 +33,7 @@ fun RulesTab(
     alertMessage: String,
     alertAction: AlertAction,
     alertSize: AlertSize,
+    recognitionMode: RecognitionMode,
     warningFontSize: Int,
     debugModeEnabled: Boolean,
     appSelectorExpanded: Boolean,
@@ -44,6 +47,7 @@ fun RulesTab(
     onAlertMessageChanged: (String) -> Unit,
     onAlertActionChanged: (AlertAction) -> Unit,
     onAlertSizeChanged: (AlertSize) -> Unit,
+    onRecognitionModeChanged: (RecognitionMode) -> Unit,
     onWarningFontSizeChanged: (Int) -> Unit,
     onDebugModeChanged: (Boolean) -> Unit,
     onToggleAppSelector: () -> Unit,
@@ -55,6 +59,7 @@ fun RulesTab(
     onAddTitleRule: () -> Unit,
     onAddTagRule: () -> Unit,
     onAddTextRule: () -> Unit,
+    onUpdateRule: (Long, RuleTarget, String) -> Unit,
     onRemoveRule: (Long) -> Unit,
 ) {
     LazyColumn(
@@ -85,6 +90,7 @@ fun RulesTab(
                 onAddTitleRule = onAddTitleRule,
                 onAddTagRule = onAddTagRule,
                 onAddTextRule = onAddTextRule,
+                onUpdateRule = onUpdateRule,
                 onRemoveRule = onRemoveRule,
             )
         }
@@ -94,12 +100,14 @@ fun RulesTab(
                 alertMessage = alertMessage,
                 alertAction = alertAction,
                 alertSize = alertSize,
+                recognitionMode = recognitionMode,
                 warningFontSize = warningFontSize,
                 debugModeEnabled = debugModeEnabled,
                 onRulesChanged = onRulesChanged,
                 onAlertMessageChanged = onAlertMessageChanged,
                 onAlertActionChanged = onAlertActionChanged,
                 onAlertSizeChanged = onAlertSizeChanged,
+                onRecognitionModeChanged = onRecognitionModeChanged,
                 onWarningFontSizeChanged = onWarningFontSizeChanged,
                 onDebugModeChanged = onDebugModeChanged,
             )
@@ -113,12 +121,14 @@ private fun RuleSettingsCard(
     alertMessage: String,
     alertAction: AlertAction,
     alertSize: AlertSize,
+    recognitionMode: RecognitionMode,
     warningFontSize: Int,
     debugModeEnabled: Boolean,
     onRulesChanged: (Boolean) -> Unit,
     onAlertMessageChanged: (String) -> Unit,
     onAlertActionChanged: (AlertAction) -> Unit,
     onAlertSizeChanged: (AlertSize) -> Unit,
+    onRecognitionModeChanged: (RecognitionMode) -> Unit,
     onWarningFontSizeChanged: (Int) -> Unit,
     onDebugModeChanged: (Boolean) -> Unit,
 ) {
@@ -128,6 +138,23 @@ private fun RuleSettingsCard(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text("\u89C4\u5219\u8BBE\u7F6E", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("识别方案", fontWeight = FontWeight.SemiBold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    RecognitionMode.entries.forEach { mode ->
+                        RecognitionModeButton(
+                            mode = mode,
+                            selected = recognitionMode == mode,
+                            modifier = Modifier.weight(1f),
+                            onClick = onRecognitionModeChanged,
+                        )
+                    }
+                }
+                Text(recognitionMode.description, color = Color(0xFF64748B), style = MaterialTheme.typography.bodySmall)
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

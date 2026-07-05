@@ -17,6 +17,7 @@ object HitRepository {
     private const val KEY_ALERT_MESSAGE = "alert_message"
     private const val KEY_ALERT_ACTION = "alert_action"
     private const val KEY_ALERT_SIZE = "alert_size"
+    private const val KEY_RECOGNITION_MODE = "recognition_mode"
     private const val KEY_WARNING_FONT_SIZE = "warning_font_size"
     private const val KEY_DEBUG_MODE = "debug_mode"
     private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
@@ -69,6 +70,17 @@ object HitRepository {
 
     fun setAlertSize(context: Context, size: AlertSize) {
         prefs(context).edit().putString(KEY_ALERT_SIZE, size.name).apply()
+    }
+
+    fun getRecognitionMode(context: Context): RecognitionMode {
+        val raw = prefs(context).getString(KEY_RECOGNITION_MODE, RecognitionMode.AUTO.name)
+        return runCatching {
+            RecognitionMode.valueOf(raw ?: RecognitionMode.AUTO.name)
+        }.getOrDefault(RecognitionMode.AUTO)
+    }
+
+    fun setRecognitionMode(context: Context, mode: RecognitionMode) {
+        prefs(context).edit().putString(KEY_RECOGNITION_MODE, mode.name).apply()
     }
 
     fun getWarningFontSize(context: Context): Int {
@@ -195,6 +207,28 @@ object HitRepository {
 
     fun removeCustomRule(context: Context, id: Long) {
         saveCustomRules(context, getCustomRules(context).filterNot { it.id == id })
+    }
+
+    fun updateCustomRule(context: Context, id: Long, target: RuleTarget, keyword: String) {
+        val cleaned = keyword.trim()
+        if (cleaned.isBlank()) return
+
+        val rules = getCustomRules(context)
+        val exists = rules.any {
+            it.id != id && it.target == target && it.keyword.equals(cleaned, ignoreCase = true)
+        }
+        if (exists) return
+
+        saveCustomRules(
+            context,
+            rules.map { rule ->
+                if (rule.id == id) {
+                    rule.copy(target = target, keyword = cleaned)
+                } else {
+                    rule
+                }
+            },
+        )
     }
 
     fun getMonitoredPackages(context: Context): Set<String> {
@@ -340,6 +374,7 @@ object HitRepository {
             .put("matchedRules", rules)
             .put("score", score)
             .put("source", source)
+            .put("ocrDurationMillis", ocrDurationMillis ?: -1L)
     }
 
     private fun JSONObject.toRiskHit(): RiskHit {
@@ -355,6 +390,7 @@ object HitRepository {
             },
             score = optInt("score"),
             source = optString("source", "未知"),
+            ocrDurationMillis = optLong("ocrDurationMillis", -1L).takeIf { it >= 0L },
         )
     }
 
@@ -366,11 +402,13 @@ object HitRepository {
             .put("timeMillis", timeMillis)
             .put("packageName", packageName)
             .put("appLabel", appLabel)
+            .put("author", author)
             .put("title", title)
             .put("content", content)
             .put("tags", tagArray)
             .put("rawText", rawText)
             .put("source", source)
+            .put("ocrDurationMillis", ocrDurationMillis ?: -1L)
     }
 
     private fun OperationLog.toJson(): JSONObject {
@@ -397,6 +435,7 @@ object HitRepository {
             timeMillis = optLong("timeMillis"),
             packageName = optString("packageName"),
             appLabel = optString("appLabel", optString("packageName", "未知App")),
+            author = optString("author"),
             title = optString("title"),
             content = optString("content"),
             tags = buildList {
@@ -406,6 +445,7 @@ object HitRepository {
             },
             rawText = optString("rawText"),
             source = optString("source", "未知"),
+            ocrDurationMillis = optLong("ocrDurationMillis", -1L).takeIf { it >= 0L },
         )
     }
 

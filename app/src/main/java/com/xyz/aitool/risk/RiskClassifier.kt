@@ -108,7 +108,7 @@ object RiskClassifier {
     }
 
     private fun ParsedVideoLog.searchableText(): String {
-        return listOf(title, content, tags.joinToString(" "), rawText)
+        return listOf(author, title, content, tags.joinToString(" "), rawText)
             .joinToString("\n")
     }
 }

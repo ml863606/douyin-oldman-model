@@ -8,7 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import org.json.JSONArray
 
 private const val DATABASE_NAME = "ai_tool_logs.db"
-private const val DATABASE_VERSION = 1
+private const val DATABASE_VERSION = 3
 private const val RETENTION_DAYS = 7L
 private const val RETENTION_MILLIS = RETENTION_DAYS * 24L * 60L * 60L * 1000L
 
@@ -25,6 +25,7 @@ class LogDatabase private constructor(context: Context) :
                 matched_rules TEXT NOT NULL,
                 score INTEGER NOT NULL,
                 source TEXT NOT NULL,
+                ocr_duration_millis INTEGER,
                 fingerprint TEXT NOT NULL UNIQUE
             )
             """.trimIndent(),
@@ -37,11 +38,13 @@ class LogDatabase private constructor(context: Context) :
                 time_millis INTEGER NOT NULL,
                 package_name TEXT NOT NULL,
                 app_label TEXT NOT NULL,
+                author TEXT NOT NULL,
                 title TEXT NOT NULL,
                 content TEXT NOT NULL,
                 tags TEXT NOT NULL,
                 raw_text TEXT NOT NULL,
                 source TEXT NOT NULL,
+                ocr_duration_millis INTEGER,
                 fingerprint TEXT NOT NULL UNIQUE
             )
             """.trimIndent(),
@@ -60,7 +63,15 @@ class LogDatabase private constructor(context: Context) :
         db.execSQL("CREATE INDEX idx_operation_logs_time ON operation_logs(time_millis DESC)")
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE risk_hits ADD COLUMN ocr_duration_millis INTEGER")
+            db.execSQL("ALTER TABLE video_logs ADD COLUMN ocr_duration_millis INTEGER")
+        }
+        if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE video_logs ADD COLUMN author TEXT NOT NULL DEFAULT ''")
+        }
+    }
 
     fun getHits(limit: Int): List<RiskHit> {
         cleanupExpired()
@@ -204,6 +215,7 @@ class LogDatabase private constructor(context: Context) :
             put("matched_rules", matchedRules.toJsonArrayString())
             put("score", score)
             put("source", source)
+            putNullableLong("ocr_duration_millis", ocrDurationMillis)
             put("fingerprint", text.take(80))
         }
     }
@@ -214,11 +226,13 @@ class LogDatabase private constructor(context: Context) :
             put("time_millis", timeMillis)
             put("package_name", packageName)
             put("app_label", appLabel)
+            put("author", author)
             put("title", title)
             put("content", content)
             put("tags", tags.toJsonArrayString())
             put("raw_text", rawText)
             put("source", source)
+            putNullableLong("ocr_duration_millis", ocrDurationMillis)
             put("fingerprint", (packageName + title + content + tags.joinToString()).take(160))
         }
     }
@@ -240,6 +254,7 @@ class LogDatabase private constructor(context: Context) :
             matchedRules = getString(column("matched_rules")).orEmpty().toStringList(),
             score = getInt(column("score")),
             source = getString(column("source")).orEmpty(),
+            ocrDurationMillis = getNullableLong("ocr_duration_millis"),
         )
     }
 
@@ -249,11 +264,13 @@ class LogDatabase private constructor(context: Context) :
             timeMillis = getLong(column("time_millis")),
             packageName = getString(column("package_name")).orEmpty(),
             appLabel = getString(column("app_label")).orEmpty(),
+            author = getString(column("author")).orEmpty(),
             title = getString(column("title")).orEmpty(),
             content = getString(column("content")).orEmpty(),
             tags = getString(column("tags")).orEmpty().toStringList(),
             rawText = getString(column("raw_text")).orEmpty(),
             source = getString(column("source")).orEmpty(),
+            ocrDurationMillis = getNullableLong("ocr_duration_millis"),
         )
     }
 
@@ -267,6 +284,20 @@ class LogDatabase private constructor(context: Context) :
     }
 
     private fun Cursor.column(name: String): Int = getColumnIndexOrThrow(name)
+
+    private fun Cursor.getNullableLong(name: String): Long? {
+        val index = getColumnIndex(name)
+        if (index < 0 || isNull(index)) return null
+        return getLong(index)
+    }
+
+    private fun ContentValues.putNullableLong(name: String, value: Long?) {
+        if (value == null) {
+            putNull(name)
+        } else {
+            put(name, value)
+        }
+    }
 
     private fun List<String>.toJsonArrayString(): String {
         val array = JSONArray()

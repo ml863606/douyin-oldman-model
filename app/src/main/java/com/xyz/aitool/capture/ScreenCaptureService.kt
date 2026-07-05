@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
+import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.Image
@@ -16,6 +17,7 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.xyz.aitool.R
@@ -72,7 +74,12 @@ class ScreenCaptureService : Service() {
         super.onDestroy()
     }
 
-    suspend fun captureVisibleText(): String? = withContext(Dispatchers.Default) {
+    suspend fun captureVisibleText(): String? {
+        return captureVisibleTextResult()?.text
+    }
+
+    suspend fun captureVisibleTextResult(): CaptureTextResult? = withContext(Dispatchers.Default) {
+        val startMillis = SystemClock.elapsedRealtime()
         val reader = imageReader ?: return@withContext null
         val image = waitForLatestImage(reader) ?: return@withContext null
         val fullBitmap = try {
@@ -82,9 +89,9 @@ class ScreenCaptureService : Service() {
         }
 
         val cropX = 0
-        val cropY = (fullBitmap.height * 0.80f).toInt()
+        val cropY = (fullBitmap.height * (2f / 3f)).toInt()
         val cropWidth = (fullBitmap.width * 0.90f).toInt().coerceAtLeast(1)
-        val cropHeight = (fullBitmap.height * 0.20f).toInt().coerceAtLeast(1)
+        val cropHeight = (fullBitmap.height * (1f / 3f)).toInt().coerceAtLeast(1)
 
         val cropped = Bitmap.createBitmap(
             fullBitmap,
@@ -95,9 +102,24 @@ class ScreenCaptureService : Service() {
         )
         fullBitmap.recycle()
 
-        runCatching { OcrProcessor.recognizeText(cropped) }
+        runCatching { OcrProcessor.recognizeTextLines(cropped) }
             .also { cropped.recycle() }
             .getOrNull()
+            ?.let { lines ->
+                val capturedLines = lines.map { line ->
+                    CapturedTextLine(
+                        text = line.text,
+                        bounds = Rect(line.bounds).apply {
+                            offset(cropX, cropY)
+                        },
+                    )
+                }
+                CaptureTextResult(
+                    text = capturedLines.joinToString(separator = "\n") { it.text },
+                    lines = capturedLines,
+                    durationMillis = SystemClock.elapsedRealtime() - startMillis,
+                )
+            }
     }
 
     private fun startProjection(resultCode: Int, data: Intent) {
@@ -220,5 +242,20 @@ class ScreenCaptureService : Service() {
         suspend fun captureTextFromCurrentScreen(): String? {
             return active?.captureVisibleText()
         }
+
+        suspend fun captureTextResultFromCurrentScreen(): CaptureTextResult? {
+            return active?.captureVisibleTextResult()
+        }
     }
 }
+
+data class CaptureTextResult(
+    val text: String,
+    val lines: List<CapturedTextLine> = emptyList(),
+    val durationMillis: Long,
+)
+
+data class CapturedTextLine(
+    val text: String,
+    val bounds: Rect,
+)

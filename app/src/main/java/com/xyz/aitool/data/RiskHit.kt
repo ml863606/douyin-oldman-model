@@ -7,4 +7,5 @@ data class RiskHit(
     val matchedRules: List<String>,
     val score: Int,
     val source: String,
+    val ocrDurationMillis: Long? = null,
 )
