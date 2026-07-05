@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: "Release tag, for example v0.1.0"
+        description: "Release tag, for example v0.1.0 or 0.1.0"
         required: true
         type: string
 
@@ -29,11 +29,17 @@ jobs:
             TAG="${GITHUB_REF_NAME}"
           fi
 
+          TAG="$(echo "$TAG" | xargs)"
+          if echo "$TAG" | grep -Eq '^[0-9]+(\.[0-9]+){1,2}([-+][0-9A-Za-z.-]+)?$'; then
+            TAG="v$TAG"
+          fi
+
           if ! echo "$TAG" | grep -Eq '^v[0-9]+(\.[0-9]+){1,2}([-+][0-9A-Za-z.-]+)?$'; then
-            echo "Tag must look like v0.1.0 or v0.1.0-beta.1"
+            echo "Tag must look like v0.1.0, 0.1.0, v0.1.0-beta.1, or 0.1.0-beta.1"
             exit 1
           fi
 
+          echo "Resolved release tag: $TAG"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "apk_name=douiyin-oldman-model-${TAG}-debug.apk" >> "$GITHUB_OUTPUT"
 
