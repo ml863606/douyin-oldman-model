@@ -32,8 +32,8 @@ jobs:
       - name: Install Android SDK platform
         run: |
           SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKMANAGER" --licenses >/dev/null
-          "$SDKMANAGER" "platforms;android-37"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-37.0"
 
       - name: Run unit tests
         run: gradle testDebugUnitTest --stacktrace
