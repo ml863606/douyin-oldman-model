@@ -1,0 +1,90 @@
+name: Release Android APK
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Release tag, for example v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release-debug-apk:
+    name: Build and publish debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Resolve release tag
+        id: release
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag_name }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+
+          if ! echo "$TAG" | grep -Eq '^v[0-9]+(\.[0-9]+){1,2}([-+][0-9A-Za-z.-]+)?$'; then
+            echo "Tag must look like v0.1.0 or v0.1.0-beta.1"
+            exit 1
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "apk_name=douiyin-oldman-model-${TAG}-debug.apk" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.6.1"
+
+      - name: Install Android SDK platform
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-37.0"
+
+      - name: Run unit tests
+        run: gradle testDebugUnitTest --stacktrace
+
+      - name: Build debug APK
+        run: gradle assembleDebug --stacktrace
+
+      - name: Rename APK
+        run: |
+          mkdir -p release
+          cp app/build/outputs/apk/debug/app-debug.apk "release/${{ steps.release.outputs.apk_name }}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.release.outputs.tag }}
+        run: |
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Release $TAG_NAME already exists"
+          else
+            gh release create "$TAG_NAME" \
+              --title "$TAG_NAME" \
+              --notes "自动构建的调试 APK。" \
+              --target "$GITHUB_SHA"
+          fi
+
+      - name: Upload APK to Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.release.outputs.tag }}
+        run: |
+          gh release upload "$TAG_NAME" "release/${{ steps.release.outputs.apk_name }}" --clobber
