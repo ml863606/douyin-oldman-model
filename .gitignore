@@ -1,0 +1,44 @@
+# Gradle / Android build outputs
+.gradle/
+.kotlin/
+build/
+**/build/
+
+# Android Studio local files
+.idea/caches/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/dictionaries/
+.idea/shelf/
+
+# Local SDK and machine-specific config
+local.properties
+
+# Generated APK / bundle / mapping artifacts
+*.apk
+*.ap_
+*.aab
+*.aar
+*.dex
+*.class
+*.hprof
+mapping/
+captures/
+
+# Signing and secrets
+*.jks
+*.keystore
+keystore.properties
+secrets.properties
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Codex / local assistant scratch state
+.codex/
+.claude/
