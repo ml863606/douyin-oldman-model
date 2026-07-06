@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">AI视频提醒助手</string>
-    <string name="accessibility_service_label">AI视频风险提醒</string>
+    <string name="app_name">抖音-老年人模式</string>
+    <string name="accessibility_service_label">抖音风险提醒</string>
     <string name="accessibility_service_description">读取抖音当前屏幕上的可见文字，用于识别疑似 AI 营销或虚假教程内容并提醒。</string>
     <string name="screen_capture_channel_name">屏幕识别</string>
-    <string name="screen_capture_notification_title">AI视频提醒助手正在识别屏幕</string>
+    <string name="screen_capture_notification_title">抖音-老年人模式正在识别屏幕</string>
     <string name="screen_capture_notification_text">仅在抖音页面需要兜底识别时使用截图 OCR。</string>
 </resources>

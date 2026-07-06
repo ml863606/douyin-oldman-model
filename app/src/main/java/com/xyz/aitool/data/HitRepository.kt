@@ -97,7 +97,7 @@ object HitRepository {
     }
 
     fun isDebugModeEnabled(context: Context): Boolean {
-        return prefs(context).getBoolean(KEY_DEBUG_MODE, false)
+        return prefs(context).getBoolean(KEY_DEBUG_MODE, true)
     }
 
     fun setDebugModeEnabled(context: Context, enabled: Boolean) {

@@ -169,6 +169,8 @@ private fun AppScreen() {
     var textRuleText by remember { mutableStateOf("") }
     var appSelectorExpanded by remember { mutableStateOf(false) }
     var customRulesExpanded by remember { mutableStateOf(false) }
+    var videoLogsExpanded by remember { mutableStateOf(true) }
+    var operationLogsExpanded by remember { mutableStateOf(true) }
     var selectedTab by remember { mutableStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -431,6 +433,10 @@ private fun AppScreen() {
                 3 -> LogsTab(
                     videoLogs = videoLogs,
                     operationLogs = operationLogs,
+                    videoLogsExpanded = videoLogsExpanded,
+                    operationLogsExpanded = operationLogsExpanded,
+                    onToggleVideoLogs = { videoLogsExpanded = !videoLogsExpanded },
+                    onToggleOperationLogs = { operationLogsExpanded = !operationLogsExpanded },
                     onClearAllLogs = {
                         HitRepository.clearRecordLogs(context)
                         hits = emptyList()
@@ -479,7 +485,7 @@ fun HeaderPanel(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "AI视频提醒助手",
+                    text = "抖音-老年人模式",
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White,
                     fontWeight = FontWeight.ExtraBold,
@@ -908,6 +914,32 @@ fun InfoChip(
 }
 
 @Composable
+fun SourceChip(source: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .clip(AppControlShape)
+            .background(AppAccentSoft)
+            .padding(horizontal = 9.dp, vertical = 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.material3.Icon(
+            painter = painterResource(source.sourceIconRes()),
+            contentDescription = source.sourceShortLabel(),
+            tint = AppAccent,
+            modifier = Modifier.size(15.dp),
+        )
+        Text(
+            text = source.sourceShortLabel(),
+            color = AppAccent,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+            softWrap = false,
+        )
+    }
+}
+
+@Composable
 fun AppIconBox(
     appIcon: androidx.compose.ui.graphics.ImageBitmap?,
     appLabel: String,
@@ -1273,10 +1305,12 @@ fun HitCard(hit: RiskHit) {
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 InfoChip("风险分 ${hit.score}", contentColor = AppDanger, containerColor = AppDangerSoft)
+                SourceChip(hit.source)
+                Spacer(Modifier.weight(1f))
                 Text(
                     text = DateFormat.format("MM-dd HH:mm:ss", hit.timeMillis).toString(),
                     color = AppSubtle,
@@ -1296,10 +1330,12 @@ fun HitCard(hit: RiskHit) {
                 style = MaterialTheme.typography.bodySmall,
             )
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("${hit.source.recognitionDurationTitle()}：${recognitionDurationLabel(hit.source, hit.recognitionDurationMillis, hit.ocrDurationMillis)}", color = AppMuted, style = MaterialTheme.typography.bodySmall)
-                Text("出文案耗时：${durationLabel(hit.appearanceToRecognitionMillis)}", color = AppMuted, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "${hit.source.recognitionDurationTitle()}：${recognitionDurationLabel(hit.source, hit.recognitionDurationMillis, hit.ocrDurationMillis)} / 出文案耗时：${durationLabel(hit.appearanceToRecognitionMillis)}",
+                    color = AppMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 Text("识别范围：${hit.source.recognitionRangeLabel()}", color = AppMuted, style = MaterialTheme.typography.bodySmall)
-                Text("来源：${hit.source}", color = AppSubtle, style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -1358,21 +1394,14 @@ fun VideoLogCard(log: ParsedVideoLog) {
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                InfoChip(
-                    text = log.source,
-                    modifier = Modifier.weight(1f),
-                    contentColor = AppAccent,
-                    containerColor = AppAccentSoft,
-                )
-                InfoChip(
-                    recognitionDurationLabel(log.source, log.recognitionDurationMillis, log.ocrDurationMillis),
-                    contentColor = AppMuted,
-                    containerColor = AppSurfaceSoft,
-                )
+                SourceChip(source = log.source)
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("${log.source.recognitionDurationTitle()}：${recognitionDurationLabel(log.source, log.recognitionDurationMillis, log.ocrDurationMillis)}", color = AppMuted, style = MaterialTheme.typography.bodySmall)
-                Text("出文案耗时：${durationLabel(log.appearanceToRecognitionMillis)}", color = AppMuted, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "${log.source.recognitionDurationTitle()}：${recognitionDurationLabel(log.source, log.recognitionDurationMillis, log.ocrDurationMillis)} / 出文案耗时：${durationLabel(log.appearanceToRecognitionMillis)}",
+                    color = AppMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 Text("识别范围：${log.source.recognitionRangeLabel()}", color = AppMuted, style = MaterialTheme.typography.bodySmall)
             }
             HorizontalDivider(color = AppLine)
@@ -1442,6 +1471,22 @@ private fun String.recognitionDurationTitle(): String {
         contains("OCR", ignoreCase = true) -> "OCR识别耗时"
         contains("无障碍") -> "无障碍识别耗时"
         else -> "识别耗时"
+    }
+}
+
+private fun String.sourceIconRes(): Int {
+    return if (contains("OCR", ignoreCase = true)) {
+        R.drawable.ic_source_ocr
+    } else {
+        R.drawable.ic_source_accessibility
+    }
+}
+
+private fun String.sourceShortLabel(): String {
+    return when {
+        contains("OCR", ignoreCase = true) -> "OCR"
+        contains("无障碍", ignoreCase = true) -> "无障碍"
+        else -> ifBlank { "来源" }
     }
 }
 

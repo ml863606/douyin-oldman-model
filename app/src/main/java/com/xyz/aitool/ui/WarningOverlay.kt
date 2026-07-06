@@ -93,7 +93,7 @@ class WarningOverlay(private val service: AccessibilityService) {
             container.addActionButton(
                 text = confirmText,
                 action = WarningOverlayAction.DEFAULT_SKIP,
-                topMargin = 30,
+                topMargin = 36,
                 primary = true,
                 onAction = onAction,
             )
@@ -185,10 +185,20 @@ class WarningOverlay(private val service: AccessibilityService) {
         addView(
             Button(service).apply {
                 this.text = text
-                textSize = if (primary) 20f else 15f
-                setTextColor(Color.rgb(127, 29, 29))
+                isAllCaps = false
+                textSize = if (primary) 28f else 15f
+                setTextColor(if (primary) Color.rgb(17, 24, 39) else Color.rgb(127, 29, 29))
                 typeface = Typeface.DEFAULT_BOLD
-                setPadding(16, 10, 16, 10)
+                setPadding(20, if (primary) 24 else 10, 20, if (primary) 24 else 10)
+                minHeight = if (primary) 96 else 48
+                background = GradientDrawable().apply {
+                    cornerRadius = if (primary) 28f else 18f
+                    setColor(if (primary) Color.rgb(253, 224, 71) else Color.WHITE)
+                    setStroke(
+                        if (primary) 6 else 2,
+                        if (primary) Color.WHITE else Color.rgb(254, 202, 202),
+                    )
+                }
                 setOnClickListener {
                     hide()
                     handler.postDelayed({ onAction(action) }, 260L)
