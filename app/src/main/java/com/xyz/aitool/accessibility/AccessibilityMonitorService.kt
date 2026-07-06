@@ -15,6 +15,7 @@ import com.xyz.aitool.data.ParsedVideoLog
 import com.xyz.aitool.data.RecognitionMode
 import com.xyz.aitool.data.RiskHit
 import com.xyz.aitool.data.VideoTextParser
+import com.xyz.aitool.ocr.OcrEngine
 import com.xyz.aitool.risk.RiskClassifier
 import com.xyz.aitool.ui.WarningOverlay
 import com.xyz.aitool.ui.WarningOverlayAction
@@ -100,7 +101,7 @@ class AccessibilityMonitorService : AccessibilityService() {
         val accessibilityText = collectVisibleText(rootInActiveWindow)
         val preferOcr = shouldPreferOcr(packageName, windowClassName)
         val accessibilityTextLooksSelf = accessibilityText.isSelfUiText()
-        if (accessibilityTextLooksSelf && !preferOcr && recognitionMode != RecognitionMode.OCR_COORDINATE) return
+        if (accessibilityTextLooksSelf && !preferOcr && !recognitionMode.isOcrOnlyMode()) return
 
         val accessibilityCoordinateVideo = VideoTextParser.parse(
             rawText = accessibilityCoordinateText,
@@ -132,7 +133,7 @@ class AccessibilityMonitorService : AccessibilityService() {
             RecognitionMode.ACCESSIBILITY_COORDINATE -> {
                 val ocrVideo = if (canUseOcr && accessibilityCoordinateVideo.needsOcrFallback()) {
                     recordOcrDecisionIfNeeded(packageName, windowClassName, accessibilityText.length, allowed = true)
-                    captureBestOcrVideo(packageName, appLabel)
+                    captureBestOcrVideo(packageName, appLabel, OcrEngine.ML_KIT_CHINESE)
                 } else {
                     null
                 }
@@ -147,7 +148,17 @@ class AccessibilityMonitorService : AccessibilityService() {
                     return
                 }
                 recordOcrDecisionIfNeeded(packageName, windowClassName, accessibilityText.length, allowed = true)
-                val ocrVideo = captureBestOcrVideo(packageName, appLabel)
+                val ocrVideo = captureBestOcrVideo(packageName, appLabel, OcrEngine.ML_KIT_CHINESE)
+                recordRecognitionModeDecision(recognitionMode, null, ocrVideo)
+                ocrVideo ?: return
+            }
+            RecognitionMode.PP_OCRV6 -> {
+                if (!canUseOcr) {
+                    recordOcrDecisionIfNeeded(packageName, windowClassName, accessibilityText.length, allowed = false)
+                    return
+                }
+                recordOcrDecisionIfNeeded(packageName, windowClassName, accessibilityText.length, allowed = true)
+                val ocrVideo = captureBestOcrVideo(packageName, appLabel, OcrEngine.PP_OCRV6)
                 recordRecognitionModeDecision(recognitionMode, null, ocrVideo)
                 ocrVideo ?: return
             }
@@ -155,7 +166,7 @@ class AccessibilityMonitorService : AccessibilityService() {
                 val shouldTryOcr = canUseOcr && accessibilityCoordinateVideo.needsOcrFallback()
                 val ocrVideo = if (shouldTryOcr) {
                     recordOcrDecisionIfNeeded(packageName, windowClassName, accessibilityText.length, allowed = true)
-                    captureBestOcrVideo(packageName, appLabel)
+                    captureBestOcrVideo(packageName, appLabel, OcrEngine.ML_KIT_CHINESE)
                 } else {
                     recordOcrDecisionIfNeeded(packageName, windowClassName, accessibilityText.length, canUseOcr)
                     null
@@ -218,7 +229,11 @@ class AccessibilityMonitorService : AccessibilityService() {
         )
     }
 
-    private suspend fun captureBestOcrVideo(packageName: String, appLabel: String): ParsedVideoLog? {
+    private suspend fun captureBestOcrVideo(
+        packageName: String,
+        appLabel: String,
+        engine: OcrEngine,
+    ): ParsedVideoLog? {
         var bestVideo: ParsedVideoLog? = null
         var bestScore = 0
         var stableFingerprint = ""
@@ -229,11 +244,12 @@ class AccessibilityMonitorService : AccessibilityService() {
             if (warningOverlay?.isShowing == true) return bestVideo
 
             val attempt = attemptIndex + 1
-            val result = ScreenCaptureService.captureTextResultFromCurrentScreen()
+            val result = ScreenCaptureService.captureTextResultFromCurrentScreen(engine)
             val captionText = result?.captionTextFromOcrLines().orEmpty()
+            val sourceLabel = result?.sourceLabel() ?: engine.label
             val video = VideoTextParser.parse(
                 rawText = captionText.ifBlank { result?.text.orEmpty() },
-                source = "OCR坐标",
+                source = sourceLabel,
                 packageName = packageName,
                 appLabel = appLabel,
             )?.copy(
@@ -257,9 +273,10 @@ class AccessibilityMonitorService : AccessibilityService() {
 
             recordDebugOperation(
                 "OCR采样",
-                "第${attempt}次 分数=$score 作者=${video?.author?.ifBlank { "无" } ?: "无"} " +
+                "引擎=${sourceLabel} 第${attempt}次 分数=$score 作者=${video?.author?.ifBlank { "无" } ?: "无"} " +
                     "标题=${video?.title?.ifBlank { "无" } ?: "无"} 标签=${video?.tags?.size ?: 0} " +
-                    "耗时=${result?.durationMillis?.formatSeconds() ?: "无"}",
+                    "耗时=${result?.durationMillis?.formatSeconds() ?: "无"}" +
+                    result?.fallbackReason.orEmpty().let { reason -> if (reason.isBlank()) "" else " $reason" },
             )
 
             if (score >= OCR_GOOD_ENOUGH_SCORE || (score >= OCR_ACCEPTABLE_SCORE && stableCount >= 2)) {
@@ -303,6 +320,18 @@ class AccessibilityMonitorService : AccessibilityService() {
             .map { it.text.trim() }
             .distinct()
             .joinToString("\n")
+    }
+
+    private fun CaptureTextResult.sourceLabel(): String {
+        return if (requestedEngine == OcrEngine.PP_OCRV6 && engine != requestedEngine) {
+            "${requestedEngine.label}降级${engine.label}"
+        } else {
+            engine.label
+        }
+    }
+
+    private fun RecognitionMode.isOcrOnlyMode(): Boolean {
+        return this == RecognitionMode.OCR_COORDINATE || this == RecognitionMode.PP_OCRV6
     }
 
     private fun ParsedVideoLog.qualityScore(): Int {

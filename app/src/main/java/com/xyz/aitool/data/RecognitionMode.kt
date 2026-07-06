@@ -13,4 +13,8 @@ enum class RecognitionMode(val label: String, val description: String) {
         label = "OCR坐标",
         description = "按 OCR 行坐标解析左下文案区域，适合无障碍节点不完整的视频。",
     ),
+    PP_OCRV6(
+        label = "PP-OCRv6",
+        description = "使用 PP-OCRv6 识别屏幕底部文案区域；未打包模型时会自动降级到 ML Kit。",
+    ),
 }

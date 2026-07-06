@@ -1468,6 +1468,7 @@ private fun String.recognitionRangeLabel(): String {
 
 private fun String.recognitionDurationTitle(): String {
     return when {
+        contains("PP-OCRv6", ignoreCase = true) -> "PP-OCRv6识别耗时"
         contains("OCR", ignoreCase = true) -> "OCR识别耗时"
         contains("无障碍") -> "无障碍识别耗时"
         else -> "识别耗时"
@@ -1484,6 +1485,7 @@ private fun String.sourceIconRes(): Int {
 
 private fun String.sourceShortLabel(): String {
     return when {
+        contains("PP-OCRv6", ignoreCase = true) -> "PP-OCRv6"
         contains("OCR", ignoreCase = true) -> "OCR"
         contains("无障碍", ignoreCase = true) -> "无障碍"
         else -> ifBlank { "来源" }

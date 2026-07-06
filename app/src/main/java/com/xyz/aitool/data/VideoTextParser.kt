@@ -40,6 +40,7 @@ object VideoTextParser {
         "未解析到",
         "无障碍文本",
         "截图OCR",
+        "PP-OCRv6",
         "去汽水听",
     )
 
@@ -179,6 +180,7 @@ object VideoTextParser {
             startsWith("App=") ||
             startsWith("Activity=") ||
             startsWith("OCR触发判断") ||
+            startsWith("PP-OCRv6") ||
             startsWith("检测触发判断") ||
             contains("还没有命中记录") ||
             contains("还没有解析日志") ||

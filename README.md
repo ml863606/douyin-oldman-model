@@ -59,7 +59,7 @@ flowchart TD
 
 - 支持 Android 13 到 Android 17，`minSdk = 33`，`targetSdk = 37`。
 - 默认监听抖音和抖音极速版，也支持在 App 选择器中添加其它 App。
-- 支持三种识别方案：自动、无障碍坐标、OCR 坐标。
+- 支持四种识别方案：自动、无障碍坐标、OCR 坐标、PP-OCRv6。
 - 优先通过无障碍服务读取当前页面可见文字。
 - 当无障碍文本不足时，使用 MediaProjection 截图，并通过 ML Kit 中文 OCR 识别屏幕底部文案区域。
 - 解析每个视频的作者、标题、内容、标签、识别耗时、出文案耗时和识别范围。
@@ -78,6 +78,7 @@ flowchart TD
 - Android AccessibilityService
 - Android MediaProjection
 - ML Kit Chinese Text Recognition bundled model
+- PP-OCRv6 接入预留
 - SQLite
 - Android Foreground Service
 - Gradle / Android Gradle Plugin
@@ -87,6 +88,12 @@ flowchart TD
 ```kotlin
 implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
 ```
+
+PP-OCRv6 说明：
+
+- 当前 App 已预留 `PP-OCRv6` 识别方案入口。
+- 如果未打包 PP-OCRv6 模型和端侧推理库，会自动降级到 ML Kit 中文 OCR，并在 Debug 日志中记录原因。
+- 后续完整接入时，需要补充 `assets/ppocrv6/det.nb`、`rec.nb`、`cls.nb`、`keys.txt`，并接入 Paddle Lite 或其它可用端侧推理库。
 
 工程配置：
 

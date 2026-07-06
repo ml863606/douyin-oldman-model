@@ -21,6 +21,7 @@ import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.xyz.aitool.R
+import com.xyz.aitool.ocr.OcrEngine
 import com.xyz.aitool.ocr.OcrProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -78,7 +79,9 @@ class ScreenCaptureService : Service() {
         return captureVisibleTextResult()?.text
     }
 
-    suspend fun captureVisibleTextResult(): CaptureTextResult? = withContext(Dispatchers.Default) {
+    suspend fun captureVisibleTextResult(
+        engine: OcrEngine = OcrEngine.ML_KIT_CHINESE,
+    ): CaptureTextResult? = withContext(Dispatchers.Default) {
         val startMillis = SystemClock.elapsedRealtime()
         val reader = imageReader ?: return@withContext null
         val image = waitForLatestImage(reader) ?: return@withContext null
@@ -102,11 +105,11 @@ class ScreenCaptureService : Service() {
         )
         fullBitmap.recycle()
 
-        runCatching { OcrProcessor.recognizeTextLines(cropped) }
+        runCatching { OcrProcessor.recognizeTextLines(this@ScreenCaptureService, cropped, engine) }
             .also { cropped.recycle() }
             .getOrNull()
-            ?.let { lines ->
-                val capturedLines = lines.map { line ->
+            ?.let { ocrResult ->
+                val capturedLines = ocrResult.lines.map { line ->
                     CapturedTextLine(
                         text = line.text,
                         bounds = Rect(line.bounds).apply {
@@ -118,6 +121,9 @@ class ScreenCaptureService : Service() {
                     text = capturedLines.joinToString(separator = "\n") { it.text },
                     lines = capturedLines,
                     durationMillis = SystemClock.elapsedRealtime() - startMillis,
+                    engine = ocrResult.engine,
+                    requestedEngine = ocrResult.requestedEngine,
+                    fallbackReason = ocrResult.fallbackReason,
                 )
             }
     }
@@ -243,8 +249,10 @@ class ScreenCaptureService : Service() {
             return active?.captureVisibleText()
         }
 
-        suspend fun captureTextResultFromCurrentScreen(): CaptureTextResult? {
-            return active?.captureVisibleTextResult()
+        suspend fun captureTextResultFromCurrentScreen(
+            engine: OcrEngine = OcrEngine.ML_KIT_CHINESE,
+        ): CaptureTextResult? {
+            return active?.captureVisibleTextResult(engine)
         }
     }
 }
@@ -253,6 +261,9 @@ data class CaptureTextResult(
     val text: String,
     val lines: List<CapturedTextLine> = emptyList(),
     val durationMillis: Long,
+    val engine: OcrEngine,
+    val requestedEngine: OcrEngine,
+    val fallbackReason: String? = null,
 )
 
 data class CapturedTextLine(
