@@ -1,6 +1,8 @@
 package com.xyz.aitool
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,11 +37,15 @@ fun OnboardingScreen(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A))) {
+            Card(
+                shape = AppCardShape,
+                colors = CardDefaults.cardColors(containerColor = AppDeep),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -52,7 +58,7 @@ fun OnboardingScreen(
                     )
                     Text(
                         text = "\u8FD9\u51E0\u9879\u4F1A\u5F71\u54CD\u8BC6\u522B\u3001\u63D0\u9192\u548C\u540E\u53F0\u7A33\u5B9A\u6027\u3002\u8BBE\u7F6E\u597D\u4E4B\u540E\uFF0C\u518D\u4EA4\u7ED9\u5BB6\u4EBA\u4F7F\u7528\u4F1A\u7701\u5FC3\u5F88\u591A\u3002",
-                        color = Color(0xFFCBD5E1),
+                        color = Color(0xFFCFE2DC),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -94,6 +100,7 @@ fun OnboardingScreen(
         item {
             Button(
                 modifier = Modifier.fillMaxWidth(),
+                shape = AppControlShape,
                 onClick = onFinish,
             ) {
                 Text("\u8FDB\u5165\u4E3B\u9875")
@@ -112,9 +119,14 @@ private fun GuideStepCard(
     actionText: String,
     onAction: () -> Unit,
 ) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(
+        shape = AppCardShape,
+        colors = CardDefaults.cardColors(containerColor = AppSurface),
+        border = BorderStroke(1.dp, AppLine),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
@@ -127,26 +139,34 @@ private fun GuideStepCard(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = index,
-                        color = if (done) Color(0xFF15803D) else Color(0xFFB91C1C),
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge,
-                    )
+                    Box(
+                        modifier = Modifier,
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        InfoChip(
+                            text = index,
+                            contentColor = if (done) AppAccent else AppDanger,
+                            containerColor = if (done) AppAccentSoft else AppDangerSoft,
+                        )
+                    }
                     Column {
-                        Text(title, fontWeight = FontWeight.SemiBold)
+                        Text(title, fontWeight = FontWeight.SemiBold, color = AppInk)
                         Text(
                             if (done) doneText else "\u5F85\u8BBE\u7F6E",
-                            color = if (done) Color(0xFF15803D) else Color(0xFFB91C1C),
+                            color = if (done) AppAccent else AppDanger,
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
                 }
-                OutlinedButton(onClick = onAction) {
+                OutlinedButton(
+                    shape = AppControlShape,
+                    border = BorderStroke(1.dp, AppLine),
+                    onClick = onAction,
+                ) {
                     Text(actionText)
                 }
             }
-            Text(description, color = Color(0xFF475569), style = MaterialTheme.typography.bodyMedium)
+            Text(description, color = AppMuted, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

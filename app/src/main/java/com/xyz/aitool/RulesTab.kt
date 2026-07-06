@@ -1,5 +1,6 @@
 package com.xyz.aitool
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,13 +12,15 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.xyz.aitool.data.AlertAction
@@ -65,8 +68,8 @@ fun RulesTab(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             AppSelectorCard(
@@ -132,14 +135,19 @@ private fun RuleSettingsCard(
     onWarningFontSizeChanged: (Int) -> Unit,
     onDebugModeChanged: (Boolean) -> Unit,
 ) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(
+        shape = AppCardShape,
+        colors = CardDefaults.cardColors(containerColor = AppSurface),
+        border = BorderStroke(1.dp, AppLine),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text("\u89C4\u5219\u8BBE\u7F6E", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text("\u89C4\u5219\u8BBE\u7F6E", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppInk)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("识别方案", fontWeight = FontWeight.SemiBold)
+                Text("识别方案", fontWeight = FontWeight.SemiBold, color = AppInk)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -153,7 +161,7 @@ private fun RuleSettingsCard(
                         )
                     }
                 }
-                Text(recognitionMode.description, color = Color(0xFF64748B), style = MaterialTheme.typography.bodySmall)
+                Text(recognitionMode.description, color = AppMuted, style = MaterialTheme.typography.bodySmall)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -161,13 +169,17 @@ private fun RuleSettingsCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text("\u98CE\u9669\u89C4\u5219", fontWeight = FontWeight.SemiBold)
-                    Text("\u5173\u95ED\u540E\u4E0D\u4F1A\u5F39\u51FA\u63D0\u9192", color = Color(0xFF64748B), style = MaterialTheme.typography.bodySmall)
+                    Text("\u98CE\u9669\u89C4\u5219", fontWeight = FontWeight.SemiBold, color = AppInk)
+                    Text("\u5173\u95ED\u540E\u4E0D\u4F1A\u5F39\u51FA\u63D0\u9192", color = AppMuted, style = MaterialTheme.typography.bodySmall)
                 }
-                Switch(checked = rulesEnabled, onCheckedChange = onRulesChanged)
+                Switch(
+                    checked = rulesEnabled,
+                    onCheckedChange = onRulesChanged,
+                    colors = SwitchDefaults.colors(checkedThumbColor = AppAccent, checkedTrackColor = AppAccentSoft),
+                )
             }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("\u547D\u4E2D\u540E\u7684\u5904\u7406", fontWeight = FontWeight.SemiBold)
+                Text("\u547D\u4E2D\u540E\u7684\u5904\u7406", fontWeight = FontWeight.SemiBold, color = AppInk)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -181,18 +193,25 @@ private fun RuleSettingsCard(
                         )
                     }
                 }
-                Text(alertAction.description, color = Color(0xFF64748B), style = MaterialTheme.typography.bodySmall)
+                Text(alertAction.description, color = AppMuted, style = MaterialTheme.typography.bodySmall)
             }
             OutlinedTextField(
                 value = alertMessage,
                 onValueChange = onAlertMessageChanged,
                 modifier = Modifier.fillMaxWidth(),
+                shape = AppControlShape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AppAccent,
+                    unfocusedBorderColor = AppLine,
+                    focusedLabelColor = AppAccent,
+                    cursorColor = AppAccent,
+                ),
                 label = { Text("\u5F39\u7A97\u63D0\u9192\u6587\u6848") },
                 minLines = 2,
                 maxLines = 4,
             )
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("\u8B66\u544A\u6846\u5927\u5C0F", fontWeight = FontWeight.SemiBold)
+                Text("\u8B66\u544A\u6846\u5927\u5C0F", fontWeight = FontWeight.SemiBold, color = AppInk)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -213,16 +232,21 @@ private fun RuleSettingsCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("\u98CE\u9669\u5F39\u7A97\u5B57\u4F53", fontWeight = FontWeight.SemiBold)
-                    Text("${warningFontSize}sp", color = Color(0xFFB91C1C), fontWeight = FontWeight.SemiBold)
+                    Text("\u98CE\u9669\u5F39\u7A97\u5B57\u4F53", fontWeight = FontWeight.SemiBold, color = AppInk)
+                    Text("${warningFontSize}sp", color = AppDanger, fontWeight = FontWeight.SemiBold)
                 }
                 Slider(
                     value = warningFontSize.toFloat(),
                     onValueChange = { value -> onWarningFontSizeChanged(value.toInt()) },
                     valueRange = 24f..42f,
                     steps = 17,
+                    colors = SliderDefaults.colors(
+                        thumbColor = AppAccent,
+                        activeTrackColor = AppAccent,
+                        inactiveTrackColor = AppLine,
+                    ),
                 )
-                Text("\u9ED8\u8BA4 42sp\uFF0C\u9002\u5408\u7ED9\u5BB6\u4EBA\u505A\u5F3A\u63D0\u9192\u3002", color = Color(0xFF64748B), style = MaterialTheme.typography.bodySmall)
+                Text("\u9ED8\u8BA4 42sp\uFF0C\u9002\u5408\u7ED9\u5BB6\u4EBA\u505A\u5F3A\u63D0\u9192\u3002", color = AppMuted, style = MaterialTheme.typography.bodySmall)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -230,10 +254,14 @@ private fun RuleSettingsCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text("Debug \u6A21\u5F0F", fontWeight = FontWeight.SemiBold)
-                    Text("\u5F00\u542F\u540E\u5F39\u7A97\u663E\u793A\u547D\u4E2D\u89C4\u5219\u548C\u624B\u52BF\u6D4B\u8BD5\u6309\u94AE", color = Color(0xFF64748B), style = MaterialTheme.typography.bodySmall)
+                    Text("Debug \u6A21\u5F0F", fontWeight = FontWeight.SemiBold, color = AppInk)
+                    Text("\u5F00\u542F\u540E\u5F39\u7A97\u663E\u793A\u547D\u4E2D\u89C4\u5219\u548C\u624B\u52BF\u6D4B\u8BD5\u6309\u94AE", color = AppMuted, style = MaterialTheme.typography.bodySmall)
                 }
-                Switch(checked = debugModeEnabled, onCheckedChange = onDebugModeChanged)
+                Switch(
+                    checked = debugModeEnabled,
+                    onCheckedChange = onDebugModeChanged,
+                    colors = SwitchDefaults.colors(checkedThumbColor = AppAccent, checkedTrackColor = AppAccentSoft),
+                )
             }
         }
     }

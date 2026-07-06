@@ -1,11 +1,13 @@
 package com.xyz.aitool
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,12 +27,15 @@ fun LogsTab(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             OutlinedButton(
                 modifier = Modifier.fillMaxWidth(),
+                shape = AppControlShape,
+                border = BorderStroke(1.dp, AppLine),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppDanger),
                 onClick = onClearAllLogs,
             ) {
                 Text("清空记录日志")

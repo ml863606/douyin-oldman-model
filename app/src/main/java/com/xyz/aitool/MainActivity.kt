@@ -21,28 +21,39 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -58,6 +69,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -83,19 +95,49 @@ import com.xyz.aitool.data.RiskHit
 import com.xyz.aitool.data.RuleTarget
 import kotlinx.coroutines.delay
 
+val AppBackground = Color(0xFFF6F8F4)
+val AppSurface = Color(0xFFFFFFFF)
+val AppSurfaceSoft = Color(0xFFEFF4EF)
+val AppInk = Color(0xFF10201B)
+val AppMuted = Color(0xFF60736A)
+val AppSubtle = Color(0xFF8B9A93)
+val AppAccent = Color(0xFF0F766E)
+val AppAccentSoft = Color(0xFFE0F2EE)
+val AppDanger = Color(0xFFB42318)
+val AppDangerSoft = Color(0xFFFFE7E2)
+val AppLine = Color(0xFFDDE5DF)
+val AppDeep = Color(0xFF12332D)
+
+val AppCardShape = RoundedCornerShape(18.dp)
+val AppControlShape = RoundedCornerShape(14.dp)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme(
                 colorScheme = lightColorScheme(
-                    primary = Color(0xFF2563EB),
-                    secondary = Color(0xFF0F766E),
-                    background = Color(0xFFF6F7FB),
-                    surface = Color.White,
+                    primary = AppAccent,
+                    onPrimary = Color.White,
+                    secondary = AppDeep,
+                    background = AppBackground,
+                    onBackground = AppInk,
+                    surface = AppSurface,
+                    onSurface = AppInk,
+                    surfaceVariant = AppSurfaceSoft,
+                    onSurfaceVariant = AppMuted,
+                    error = AppDanger,
+                    onError = Color.White,
+                ),
+                shapes = Shapes(
+                    extraSmall = RoundedCornerShape(8.dp),
+                    small = RoundedCornerShape(10.dp),
+                    medium = AppControlShape,
+                    large = AppCardShape,
+                    extraLarge = RoundedCornerShape(28.dp),
                 ),
             ) {
-                Surface(modifier = Modifier.fillMaxSize()) {
+                Surface(modifier = Modifier.fillMaxSize(), color = AppBackground) {
                     AppScreen()
                 }
             }
@@ -239,13 +281,23 @@ private fun AppScreen() {
     )
 
     Scaffold(
-        containerColor = Color(0xFFF6F7FB),
+        containerColor = AppBackground,
         bottomBar = {
-            NavigationBar(containerColor = Color.White) {
+            NavigationBar(
+                containerColor = AppSurface,
+                tonalElevation = 0.dp,
+            ) {
                 tabs.forEachIndexed { index, tab ->
                     NavigationBarItem(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = AppAccent,
+                            selectedTextColor = AppAccent,
+                            indicatorColor = AppAccentSoft,
+                            unselectedIconColor = AppMuted,
+                            unselectedTextColor = AppMuted,
+                        ),
                         icon = {
                             androidx.compose.material3.Icon(
                                 painter = painterResource(tab.iconRes),
@@ -417,54 +469,67 @@ fun HeaderPanel(
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = AppDeep),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     text = "AI视频提醒助手",
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                 )
                 Text(
-                    text = "当前模式：${alertAction.label}",
+                    text = "当前处理：${alertAction.label}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFFCBD5E1),
+                    color = Color(0xFFCFE2DC),
                 )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                SummaryPill("无障碍", if (accessibilityEnabled) "开" else "关")
-                SummaryPill("OCR", if (captureRunning) "开" else "关")
-                SummaryPill("规则", if (rulesEnabled) "开" else "关")
+                SummaryPill("无障碍", if (accessibilityEnabled) "开" else "关", Modifier.weight(1f))
+                SummaryPill("OCR", if (captureRunning) "开" else "关", Modifier.weight(1f))
+                SummaryPill("规则", if (rulesEnabled) "开" else "关", Modifier.weight(1f))
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("监控 $selectedAppCount 个 App", color = Color(0xFFE2E8F0), style = MaterialTheme.typography.bodySmall)
-                Text("命中 $hitCount / 日志 $logCount", color = Color(0xFFE2E8F0), style = MaterialTheme.typography.bodySmall)
+                Text("监控 $selectedAppCount 个 App", color = Color(0xFFE7F0EC), style = MaterialTheme.typography.bodySmall)
+                Text("命中 $hitCount / 日志 $logCount", color = Color(0xFFE7F0EC), style = MaterialTheme.typography.bodySmall)
             }
         }
     }
 }
 
 @Composable
-fun SummaryPill(label: String, value: String) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))) {
+fun SummaryPill(label: String, value: String, modifier: Modifier = Modifier) {
+    val active = value == "开"
+    Card(
+        modifier = modifier,
+        shape = AppControlShape,
+        colors = CardDefaults.cardColors(
+            containerColor = if (active) Color(0xFFE0F2EE) else Color(0xFF294A42),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(label, color = Color(0xFF94A3B8), style = MaterialTheme.typography.bodySmall)
-            Text(value, color = Color.White, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
+            Text(label, color = if (active) AppAccent else Color(0xFFCFE2DC), style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.width(6.dp))
+            Text(value, color = if (active) AppDeep else Color.White, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -482,8 +547,8 @@ fun SectionHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(meta, color = Color(0xFF64748B), style = MaterialTheme.typography.bodySmall)
+            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = AppInk)
+            Text(meta, color = AppMuted, style = MaterialTheme.typography.bodySmall)
         }
         TextButton(onClick = onAction) {
             Text(actionText)
@@ -493,11 +558,16 @@ fun SectionHeader(
 
 @Composable
 fun EmptyStateCard(text: String) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(
+        shape = AppCardShape,
+        colors = CardDefaults.cardColors(containerColor = AppSurface),
+        border = BorderStroke(1.dp, AppLine),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Text(
             text = text,
-            modifier = Modifier.padding(16.dp),
-            color = Color(0xFF64748B),
+            modifier = Modifier.padding(18.dp),
+            color = AppMuted,
         )
     }
 }
@@ -641,12 +711,17 @@ fun StatusCard(
     onStopCapture: () -> Unit,
     onOpenOnboarding: () -> Unit,
 ) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(
+        shape = AppCardShape,
+        colors = CardDefaults.cardColors(containerColor = AppSurface),
+        border = BorderStroke(1.dp, AppLine),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text("运行控制", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text("运行控制", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = AppInk)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -666,6 +741,9 @@ fun StatusCard(
             }
             OutlinedButton(
                 modifier = Modifier.fillMaxWidth(),
+                shape = AppControlShape,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppAccent),
+                border = BorderStroke(1.dp, AppLine),
                 onClick = onOpenOnboarding,
             ) {
                 Text("重新打开引导")
@@ -685,7 +763,9 @@ fun AlertActionButton(
     if (selected) {
         Button(
             modifier = modifier,
+            shape = AppControlShape,
             contentPadding = contentPadding,
+            colors = ButtonDefaults.buttonColors(containerColor = AppAccent, contentColor = Color.White),
             onClick = { onClick(action) },
         ) {
             Text(
@@ -698,7 +778,10 @@ fun AlertActionButton(
     } else {
         OutlinedButton(
             modifier = modifier,
+            shape = AppControlShape,
             contentPadding = contentPadding,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppMuted),
+            border = BorderStroke(1.dp, AppLine),
             onClick = { onClick(action) },
         ) {
             Text(
@@ -719,11 +802,22 @@ fun AlertSizeButton(
     onClick: (AlertSize) -> Unit,
 ) {
     if (selected) {
-        Button(modifier = modifier, onClick = { onClick(size) }) {
+        Button(
+            modifier = modifier,
+            shape = AppControlShape,
+            colors = ButtonDefaults.buttonColors(containerColor = AppAccent, contentColor = Color.White),
+            onClick = { onClick(size) },
+        ) {
             Text(size.label)
         }
     } else {
-        OutlinedButton(modifier = modifier, onClick = { onClick(size) }) {
+        OutlinedButton(
+            modifier = modifier,
+            shape = AppControlShape,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppMuted),
+            border = BorderStroke(1.dp, AppLine),
+            onClick = { onClick(size) },
+        ) {
             Text(size.label)
         }
     }
@@ -740,7 +834,9 @@ fun RecognitionModeButton(
     if (selected) {
         Button(
             modifier = modifier,
+            shape = AppControlShape,
             contentPadding = contentPadding,
+            colors = ButtonDefaults.buttonColors(containerColor = AppAccent, contentColor = Color.White),
             onClick = { onClick(mode) },
         ) {
             Text(mode.label, maxLines = 1, softWrap = false, fontSize = 13.sp)
@@ -748,7 +844,10 @@ fun RecognitionModeButton(
     } else {
         OutlinedButton(
             modifier = modifier,
+            shape = AppControlShape,
             contentPadding = contentPadding,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppMuted),
+            border = BorderStroke(1.dp, AppLine),
             onClick = { onClick(mode) },
         ) {
             Text(mode.label, maxLines = 1, softWrap = false, fontSize = 13.sp)
@@ -764,12 +863,73 @@ fun StateButton(
     onClick: () -> Unit,
 ) {
     if (active) {
-        Button(modifier = modifier, onClick = onClick) {
+        Button(
+            modifier = modifier,
+            shape = AppControlShape,
+            colors = ButtonDefaults.buttonColors(containerColor = AppAccent, contentColor = Color.White),
+            onClick = onClick,
+        ) {
             Text(label)
         }
     } else {
-        OutlinedButton(modifier = modifier, onClick = onClick) {
+        OutlinedButton(
+            modifier = modifier,
+            shape = AppControlShape,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppAccent),
+            border = BorderStroke(1.dp, AppLine),
+            onClick = onClick,
+        ) {
             Text(label)
+        }
+    }
+}
+
+@Composable
+fun InfoChip(
+    text: String,
+    modifier: Modifier = Modifier,
+    contentColor: Color = AppMuted,
+    containerColor: Color = AppSurfaceSoft,
+) {
+    Box(
+        modifier = modifier
+            .clip(AppControlShape)
+            .background(containerColor)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+    ) {
+        Text(
+            text = text,
+            color = contentColor,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+            softWrap = false,
+        )
+    }
+}
+
+@Composable
+fun AppIconBox(
+    appIcon: androidx.compose.ui.graphics.ImageBitmap?,
+    appLabel: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(AppSurfaceSoft),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (appIcon != null) {
+            Image(
+                bitmap = appIcon,
+                contentDescription = appLabel,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+            )
+        } else {
+            Text("App", color = AppMuted, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -782,10 +942,15 @@ fun AppSelectorCard(
     onTargetChanged: (MonitorTarget, Boolean) -> Unit,
 ) {
     val selectedCount = targets.count { it.selected }
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(
+        shape = AppCardShape,
+        colors = CardDefaults.cardColors(containerColor = AppSurface),
+        border = BorderStroke(1.dp, AppLine),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
                 modifier = Modifier
@@ -795,17 +960,21 @@ fun AppSelectorCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text("App 选择器", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("App 选择器", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppInk)
                     Text(
                         "已选择 $selectedCount 个 App，默认包含抖音",
-                        color = Color(0xFF64748B),
+                        color = AppMuted,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                Text(if (expanded) "收起" else "展开", color = Color(0xFF2563EB), fontWeight = FontWeight.SemiBold)
+                InfoChip(
+                    text = if (expanded) "收起" else "展开",
+                    contentColor = AppAccent,
+                    containerColor = AppAccentSoft,
+                )
             }
             if (expanded) {
-                targets.forEach { target ->
+                targets.forEachIndexed { index, target ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -814,13 +983,23 @@ fun AppSelectorCard(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(target.label, fontWeight = FontWeight.SemiBold)
-                            Text(target.packageName, color = Color(0xFF64748B), style = MaterialTheme.typography.bodySmall)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(target.label, fontWeight = FontWeight.SemiBold, color = AppInk)
+                                if (target.selected) {
+                                    Spacer(Modifier.width(8.dp))
+                                    InfoChip("已选", contentColor = AppAccent, containerColor = AppAccentSoft)
+                                }
+                            }
+                            Text(target.packageName, color = AppSubtle, style = MaterialTheme.typography.bodySmall)
                         }
                         Checkbox(
                             checked = target.selected,
+                            colors = CheckboxDefaults.colors(checkedColor = AppAccent),
                             onCheckedChange = { selected -> onTargetChanged(target, selected) },
                         )
+                    }
+                    if (index != targets.lastIndex) {
+                        HorizontalDivider(color = AppLine)
                     }
                 }
             }
@@ -845,10 +1024,15 @@ fun CustomRulesCard(
     onUpdateRule: (Long, RuleTarget, String) -> Unit,
     onRemoveRule: (Long) -> Unit,
 ) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(
+        shape = AppCardShape,
+        colors = CardDefaults.cardColors(containerColor = AppSurface),
+        border = BorderStroke(1.dp, AppLine),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
                 modifier = Modifier
@@ -858,19 +1042,23 @@ fun CustomRulesCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text("自定义命中规则", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("自定义命中规则", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = AppInk)
                     Text(
                         "${customRules.size} 条规则，支持标题/标签/文本包含",
-                        color = Color(0xFF64748B),
+                        color = AppMuted,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                Text(if (expanded) "收起" else "展开", color = Color(0xFF2563EB), fontWeight = FontWeight.SemiBold)
+                InfoChip(
+                    text = if (expanded) "收起" else "展开",
+                    contentColor = AppAccent,
+                    containerColor = AppAccentSoft,
+                )
             }
             if (expanded) {
                 Text(
                     "支持“标题包含 xxx”“标签包含 xxx”和“文本包含 xxx”。命中后会像内置规则一样弹出提醒。",
-                    color = Color(0xFF64748B),
+                    color = AppMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
                 RuleInputRow(
@@ -892,7 +1080,19 @@ fun CustomRulesCard(
                     onAdd = onAddTextRule,
                 )
                 if (customRules.isEmpty()) {
-                    Text("暂无自定义规则", color = Color(0xFF94A3B8), style = MaterialTheme.typography.bodySmall)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(AppControlShape)
+                            .background(AppSurfaceSoft)
+                            .padding(14.dp),
+                    ) {
+                        Text(
+                            "暂无自定义规则。添加关键词后，匹配到标题、标签或文本就会提醒。",
+                            color = AppMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 } else {
                     customRules.forEach { rule ->
                         RuleRow(
@@ -923,10 +1123,22 @@ fun RuleInputRow(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.weight(1f),
+            shape = AppControlShape,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = AppAccent,
+                unfocusedBorderColor = AppLine,
+                focusedLabelColor = AppAccent,
+                cursorColor = AppAccent,
+            ),
             label = { Text(label) },
             singleLine = true,
         )
-        Button(onClick = onAdd, enabled = value.isNotBlank()) {
+        Button(
+            shape = AppControlShape,
+            colors = ButtonDefaults.buttonColors(containerColor = AppAccent, contentColor = Color.White),
+            onClick = onAdd,
+            enabled = value.isNotBlank(),
+        ) {
             Text("添加")
         }
     }
@@ -944,7 +1156,11 @@ fun RuleRow(
 
     if (editing) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(AppControlShape)
+                .background(AppSurfaceSoft)
+                .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
@@ -954,11 +1170,24 @@ fun RuleRow(
                 RuleTarget.entries.forEach { target ->
                     val modifier = Modifier.weight(1f)
                     if (editedTarget == target) {
-                        Button(modifier = modifier, onClick = { editedTarget = target }) {
+                        Button(
+                            modifier = modifier,
+                            shape = AppControlShape,
+                            colors = ButtonDefaults.buttonColors(containerColor = AppAccent, contentColor = Color.White),
+                            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
+                            onClick = { editedTarget = target },
+                        ) {
                             Text(target.label, maxLines = 1, softWrap = false)
                         }
                     } else {
-                        OutlinedButton(modifier = modifier, onClick = { editedTarget = target }) {
+                        OutlinedButton(
+                            modifier = modifier,
+                            shape = AppControlShape,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AppMuted),
+                            border = BorderStroke(1.dp, AppLine),
+                            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
+                            onClick = { editedTarget = target },
+                        ) {
                             Text(target.label, maxLines = 1, softWrap = false)
                         }
                     }
@@ -968,6 +1197,13 @@ fun RuleRow(
                 value = editedKeyword,
                 onValueChange = { editedKeyword = it },
                 modifier = Modifier.fillMaxWidth(),
+                shape = AppControlShape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AppAccent,
+                    unfocusedBorderColor = AppLine,
+                    focusedLabelColor = AppAccent,
+                    cursorColor = AppAccent,
+                ),
                 label = { Text("${editedTarget.label}包含") },
                 singleLine = true,
             )
@@ -986,6 +1222,8 @@ fun RuleRow(
                     Text("取消")
                 }
                 Button(
+                    shape = AppControlShape,
+                    colors = ButtonDefaults.buttonColors(containerColor = AppAccent, contentColor = Color.White),
                     onClick = {
                         onUpdateRule(rule.id, editedTarget, editedKeyword)
                         editing = false
@@ -1000,63 +1238,69 @@ fun RuleRow(
     }
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(AppControlShape)
+            .background(AppSurfaceSoft)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text("${rule.target.label}包含：${rule.keyword}", fontWeight = FontWeight.SemiBold)
-            Text("自定义规则", color = Color(0xFF64748B), style = MaterialTheme.typography.bodySmall)
+            Text("${rule.target.label}包含：${rule.keyword}", fontWeight = FontWeight.SemiBold, color = AppInk)
+            Text("自定义规则", color = AppMuted, style = MaterialTheme.typography.bodySmall)
         }
         TextButton(onClick = { editing = true }) {
-            Text("编辑")
+            Text("编辑", color = AppAccent)
         }
         TextButton(onClick = { onRemoveRule(rule.id) }) {
-            Text("删除")
+            Text("删除", color = AppDanger)
         }
     }
 }
 
 @Composable
 fun HitCard(hit: RiskHit) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(
+        shape = AppCardShape,
+        colors = CardDefaults.cardColors(containerColor = AppSurface),
+        border = BorderStroke(1.dp, Color(0xFFFFCFC7)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("风险分 ${hit.score}", fontWeight = FontWeight.Bold, color = Color(0xFFB91C1C))
-                Text(hit.source, color = Color(0xFF475569), style = MaterialTheme.typography.bodySmall)
+                InfoChip("风险分 ${hit.score}", contentColor = AppDanger, containerColor = AppDangerSoft)
+                Text(
+                    text = DateFormat.format("MM-dd HH:mm:ss", hit.timeMillis).toString(),
+                    color = AppSubtle,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
-            Text(hit.text, maxLines = 4)
+            Text(
+                text = hit.text,
+                maxLines = 4,
+                color = AppInk,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
             Text(
                 text = "命中：${hit.matchedRules.joinToString("、")}",
-                color = Color(0xFF475569),
+                color = AppDanger,
                 style = MaterialTheme.typography.bodySmall,
             )
-            Text(
-                text = "记录时间：${DateFormat.format("MM-dd HH:mm:ss", hit.timeMillis)}",
-                color = Color(0xFF94A3B8),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = "${hit.source.recognitionDurationTitle()}：${recognitionDurationLabel(hit.source, hit.recognitionDurationMillis, hit.ocrDurationMillis)}",
-                color = Color(0xFF94A3B8),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = "出文案耗时：${durationLabel(hit.appearanceToRecognitionMillis)}",
-                color = Color(0xFF94A3B8),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = "识别范围：${hit.source.recognitionRangeLabel()}",
-                color = Color(0xFF94A3B8),
-                style = MaterialTheme.typography.bodySmall,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("${hit.source.recognitionDurationTitle()}：${recognitionDurationLabel(hit.source, hit.recognitionDurationMillis, hit.ocrDurationMillis)}", color = AppMuted, style = MaterialTheme.typography.bodySmall)
+                Text("出文案耗时：${durationLabel(hit.appearanceToRecognitionMillis)}", color = AppMuted, style = MaterialTheme.typography.bodySmall)
+                Text("识别范围：${hit.source.recognitionRangeLabel()}", color = AppMuted, style = MaterialTheme.typography.bodySmall)
+                Text("来源：${hit.source}", color = AppSubtle, style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
@@ -1081,10 +1325,15 @@ fun VideoLogCard(log: ParsedVideoLog) {
             }.getOrNull()
     }
 
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(
+        shape = AppCardShape,
+        colors = CardDefaults.cardColors(containerColor = AppSurface),
+        border = BorderStroke(1.dp, AppLine),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1096,61 +1345,56 @@ fun VideoLogCard(log: ParsedVideoLog) {
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (appIcon != null) {
-                        Image(
-                            bitmap = appIcon,
-                            contentDescription = appLabel,
-                            modifier = Modifier.size(36.dp),
-                        )
-                    } else {
-                        Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-                            Text("App", color = Color(0xFF64748B), style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
+                    AppIconBox(appIcon = appIcon, appLabel = appLabel)
                     Column {
-                        Text(appLabel, fontWeight = FontWeight.SemiBold)
-                        Text(log.source, color = Color(0xFF475569), style = MaterialTheme.typography.bodySmall)
+                        Text(appLabel, fontWeight = FontWeight.SemiBold, color = AppInk)
+                        Text(log.packageName, color = AppSubtle, style = MaterialTheme.typography.bodySmall, maxLines = 1)
                     }
                 }
                 Text(
                     text = DateFormat.format("MM-dd HH:mm:ss", log.timeMillis).toString(),
-                    color = Color(0xFF94A3B8),
+                    color = AppSubtle,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Text(
-                text = "${log.source.recognitionDurationTitle()}：${recognitionDurationLabel(log.source, log.recognitionDurationMillis, log.ocrDurationMillis)}",
-                color = Color(0xFF94A3B8),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = "出文案耗时：${durationLabel(log.appearanceToRecognitionMillis)}",
-                color = Color(0xFF94A3B8),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = "识别范围：${log.source.recognitionRangeLabel()}",
-                color = Color(0xFF94A3B8),
-                style = MaterialTheme.typography.bodySmall,
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                InfoChip(
+                    text = log.source,
+                    modifier = Modifier.weight(1f),
+                    contentColor = AppAccent,
+                    containerColor = AppAccentSoft,
+                )
+                InfoChip(
+                    recognitionDurationLabel(log.source, log.recognitionDurationMillis, log.ocrDurationMillis),
+                    contentColor = AppMuted,
+                    containerColor = AppSurfaceSoft,
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("${log.source.recognitionDurationTitle()}：${recognitionDurationLabel(log.source, log.recognitionDurationMillis, log.ocrDurationMillis)}", color = AppMuted, style = MaterialTheme.typography.bodySmall)
+                Text("出文案耗时：${durationLabel(log.appearanceToRecognitionMillis)}", color = AppMuted, style = MaterialTheme.typography.bodySmall)
+                Text("识别范围：${log.source.recognitionRangeLabel()}", color = AppMuted, style = MaterialTheme.typography.bodySmall)
+            }
+            HorizontalDivider(color = AppLine)
             Text(
                 text = "作者：${log.author.ifBlank { "未解析到" }}",
-                color = Color(0xFF475569),
+                color = AppMuted,
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
                 text = "标题：${log.title.ifBlank { "未解析到" }}",
+                color = AppInk,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = "标签：${if (log.tags.isEmpty()) "未解析到" else log.tags.joinToString("、")}",
-                color = Color(0xFF0F766E),
+                color = AppAccent,
                 style = MaterialTheme.typography.bodySmall,
             )
             Text(
                 text = "内容：${log.content.ifBlank { "未解析到" }}",
                 maxLines = 5,
-                color = Color(0xFF334155),
+                color = AppInk,
             )
         }
     }
@@ -1158,24 +1402,29 @@ fun VideoLogCard(log: ParsedVideoLog) {
 
 @Composable
 fun OperationLogCard(log: OperationLog) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(
+        shape = AppCardShape,
+        colors = CardDefaults.cardColors(containerColor = AppSurface),
+        border = BorderStroke(1.dp, AppLine),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(log.action, fontWeight = FontWeight.SemiBold, color = Color(0xFF0F172A))
+                Text(log.action, fontWeight = FontWeight.SemiBold, color = AppInk)
                 Text(
                     text = DateFormat.format("MM-dd HH:mm:ss", log.timeMillis).toString(),
-                    color = Color(0xFF94A3B8),
+                    color = AppSubtle,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Text(log.message, color = Color(0xFF334155), style = MaterialTheme.typography.bodyMedium)
+            Text(log.message, color = AppMuted, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
