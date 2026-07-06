@@ -8,4 +8,6 @@ data class RiskHit(
     val score: Int,
     val source: String,
     val ocrDurationMillis: Long? = null,
+    val recognitionDurationMillis: Long? = null,
+    val appearanceToRecognitionMillis: Long? = null,
 )

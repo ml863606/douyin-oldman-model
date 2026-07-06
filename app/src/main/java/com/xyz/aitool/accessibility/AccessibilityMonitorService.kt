@@ -40,6 +40,11 @@ class AccessibilityMonitorService : AccessibilityService() {
     private var currentWindowClassName = ""
     private var lastOcrDecisionFingerprint = ""
     private var lastInspectionDecisionFingerprint = ""
+    private var lastCaptionFingerprint = ""
+    private var lastCaptionInspectedAt = 0L
+    private var lastPowerSaveFingerprint = ""
+    private var pendingVideoAppearedAt = 0L
+    private var lastMonitoredEventAt = 0L
 
     override fun onServiceConnected() {
         warningOverlay = WarningOverlay(this)
@@ -52,6 +57,11 @@ class AccessibilityMonitorService : AccessibilityService() {
         if (packageName !in HitRepository.getMonitoredPackages(this)) {
             return
         }
+        val eventAt = SystemClock.elapsedRealtime()
+        if (pendingVideoAppearedAt == 0L || eventAt - lastMonitoredEventAt > VIDEO_EVENT_CLUSTER_RESET_MILLIS) {
+            pendingVideoAppearedAt = eventAt
+        }
+        lastMonitoredEventAt = eventAt
         val className = event.className?.toString().orEmpty()
         rememberCurrentWindow(packageName, className, event.eventType)
 
@@ -78,12 +88,14 @@ class AccessibilityMonitorService : AccessibilityService() {
         val windowClassName = currentActivityClassNameFor(packageName)
         if (!canInspectPackageScreen(packageName, windowClassName)) {
             recordInspectionDecisionIfNeeded(packageName, windowClassName, allowed = false)
+            stopScreenCaptureWhenLeavingDouyinMain(packageName, windowClassName)
             return
         }
         recordInspectionDecisionIfNeeded(packageName, windowClassName, allowed = true)
 
         val appLabel = resolveAppLabel(packageName)
         val recognitionMode = HitRepository.getRecognitionMode(this)
+        val accessibilityStartedAt = SystemClock.elapsedRealtime()
         val accessibilityCoordinateText = collectCaptionTextFromNodes(rootInActiveWindow, packageName)
         val accessibilityText = collectVisibleText(rootInActiveWindow)
         val preferOcr = shouldPreferOcr(packageName, windowClassName)
@@ -95,12 +107,30 @@ class AccessibilityMonitorService : AccessibilityService() {
             source = "无障碍坐标",
             packageName = packageName,
             appLabel = appLabel,
+        )?.copy(
+            recognitionDurationMillis = SystemClock.elapsedRealtime() - accessibilityStartedAt,
         )
+        val captionFingerprint = accessibilityCoordinateVideo?.rawText
+            ?.normalizeForFingerprint()
+            ?: accessibilityCoordinateText.normalizeForFingerprint()
+        val nowElapsed = SystemClock.elapsedRealtime()
+        if (
+            captionFingerprint.isNotBlank() &&
+            captionFingerprint == lastCaptionFingerprint &&
+            nowElapsed - lastCaptionInspectedAt < SAME_CAPTION_SKIP_MILLIS
+        ) {
+            pendingVideoAppearedAt = 0L
+            return
+        }
+        if (captionFingerprint.isNotBlank()) {
+            lastCaptionFingerprint = captionFingerprint
+            lastCaptionInspectedAt = nowElapsed
+        }
 
         val canUseOcr = canUseOcrFallback(packageName, windowClassName)
         val selectedVideo = when (recognitionMode) {
             RecognitionMode.ACCESSIBILITY_COORDINATE -> {
-                val ocrVideo = if (canUseOcr && accessibilityCoordinateVideo.isLowQualityCaption()) {
+                val ocrVideo = if (canUseOcr && accessibilityCoordinateVideo.needsOcrFallback()) {
                     recordOcrDecisionIfNeeded(packageName, windowClassName, accessibilityText.length, allowed = true)
                     captureBestOcrVideo(packageName, appLabel)
                 } else {
@@ -122,8 +152,7 @@ class AccessibilityMonitorService : AccessibilityService() {
                 ocrVideo ?: return
             }
             RecognitionMode.AUTO -> {
-                val accessibilityScore = accessibilityCoordinateVideo?.qualityScore().orZero()
-                val shouldTryOcr = canUseOcr && (preferOcr || accessibilityScore < OCR_ACCEPTABLE_SCORE)
+                val shouldTryOcr = canUseOcr && accessibilityCoordinateVideo.needsOcrFallback()
                 val ocrVideo = if (shouldTryOcr) {
                     recordOcrDecisionIfNeeded(packageName, windowClassName, accessibilityText.length, allowed = true)
                     captureBestOcrVideo(packageName, appLabel)
@@ -137,7 +166,8 @@ class AccessibilityMonitorService : AccessibilityService() {
                     .maxByOrNull { it.qualityScore() }
                     ?: return
             }
-        }
+        }.withAppearanceLatency()
+        pendingVideoAppearedAt = 0L
 
         val parsedFingerprint = selectedVideo.rawText.normalizeForFingerprint()
         if (parsedFingerprint != lastParsedFingerprint) {
@@ -168,6 +198,8 @@ class AccessibilityMonitorService : AccessibilityService() {
                 score = result.score,
                 source = selectedVideo.source,
                 ocrDurationMillis = selectedVideo.ocrDurationMillis,
+                recognitionDurationMillis = selectedVideo.recognitionDurationMillis,
+                appearanceToRecognitionMillis = selectedVideo.appearanceToRecognitionMillis,
             ),
         )
         val alertAction = HitRepository.getAlertAction(this)
@@ -204,7 +236,10 @@ class AccessibilityMonitorService : AccessibilityService() {
                 source = "OCR坐标",
                 packageName = packageName,
                 appLabel = appLabel,
-            )?.copy(ocrDurationMillis = result?.durationMillis)
+            )?.copy(
+                ocrDurationMillis = result?.durationMillis,
+                recognitionDurationMillis = SystemClock.elapsedRealtime() - startedAt,
+            )
             val score = video?.qualityScore().orZero()
             val fingerprint = video?.rawText?.normalizeForFingerprint().orEmpty()
 
@@ -220,7 +255,7 @@ class AccessibilityMonitorService : AccessibilityService() {
                 bestVideo = video
             }
 
-            recordOperation(
+            recordDebugOperation(
                 "OCR采样",
                 "第${attempt}次 分数=$score 作者=${video?.author?.ifBlank { "无" } ?: "无"} " +
                     "标题=${video?.title?.ifBlank { "无" } ?: "无"} 标签=${video?.tags?.size ?: 0} " +
@@ -228,15 +263,28 @@ class AccessibilityMonitorService : AccessibilityService() {
             )
 
             if (score >= OCR_GOOD_ENOUGH_SCORE || (score >= OCR_ACCEPTABLE_SCORE && stableCount >= 2)) {
-                return bestVideo
+                return bestVideo.withTotalRecognitionDuration(startedAt)
             }
             if (SystemClock.elapsedRealtime() - startedAt >= OCR_SCAN_WINDOW_MILLIS) {
-                return bestVideo
+                return bestVideo.withTotalRecognitionDuration(startedAt)
             }
             delay(OCR_SAMPLE_INTERVAL_MILLIS)
         }
 
-        return bestVideo
+        return bestVideo.withTotalRecognitionDuration(startedAt)
+    }
+
+    private fun ParsedVideoLog.withAppearanceLatency(): ParsedVideoLog {
+        val appearedAt = pendingVideoAppearedAt.takeIf { it > 0L } ?: return this
+        return copy(
+            appearanceToRecognitionMillis = SystemClock.elapsedRealtime() - appearedAt,
+        )
+    }
+
+    private fun ParsedVideoLog?.withTotalRecognitionDuration(startedAt: Long): ParsedVideoLog? {
+        return this?.copy(
+            recognitionDurationMillis = SystemClock.elapsedRealtime() - startedAt,
+        )
     }
 
     private fun CaptureTextResult.captionTextFromOcrLines(): String {
@@ -416,7 +464,7 @@ class AccessibilityMonitorService : AccessibilityService() {
         if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || className.looksLikeActivityName()) {
             currentWindowPackageName = packageName
             currentWindowClassName = className
-            recordOperation("Activity", "$packageName / $className")
+            recordDebugOperation("Activity", "$packageName / $className")
         }
     }
 
@@ -452,7 +500,7 @@ class AccessibilityMonitorService : AccessibilityService() {
         val fingerprint = "$packageName|$windowClassName|$allowed"
         if (fingerprint == lastInspectionDecisionFingerprint) return
         lastInspectionDecisionFingerprint = fingerprint
-        recordOperation(
+        recordDebugOperation(
             "检测触发判断",
             "App=$packageName Activity=${windowClassName.ifBlank { "未识别" }} 允许检测=${if (allowed) "是" else "否"}",
         )
@@ -468,7 +516,7 @@ class AccessibilityMonitorService : AccessibilityService() {
         val fingerprint = "$packageName|$windowClassName|$accessibilityTextLength|$allowed"
         if (fingerprint == lastOcrDecisionFingerprint) return
         lastOcrDecisionFingerprint = fingerprint
-        recordOperation(
+        recordDebugOperation(
             "OCR触发判断",
             "App=$packageName Activity=${windowClassName.ifBlank { "未识别" }} 无障碍文本长度=$accessibilityTextLength 允许OCR=${if (allowed) "是" else "否"}",
         )
@@ -479,7 +527,7 @@ class AccessibilityMonitorService : AccessibilityService() {
         accessibilityVideo: ParsedVideoLog?,
         ocrVideo: ParsedVideoLog?,
     ) {
-        recordOperation(
+        recordDebugOperation(
             "识别方案",
             "方案=${mode.label} 无障碍分=${accessibilityVideo?.qualityScore().orZero()} " +
                 "OCR分=${ocrVideo?.qualityScore().orZero()} " +
@@ -487,8 +535,21 @@ class AccessibilityMonitorService : AccessibilityService() {
         )
     }
 
-    private fun ParsedVideoLog?.isLowQualityCaption(): Boolean {
-        return this == null || qualityScore() < OCR_ACCEPTABLE_SCORE || title.isBlank()
+    private fun ParsedVideoLog?.needsOcrFallback(): Boolean {
+        return this == null || title.isBlank()
+    }
+
+    private fun stopScreenCaptureWhenLeavingDouyinMain(packageName: String, windowClassName: String) {
+        if (packageName != DOUYIN_PACKAGE_NAME || windowClassName == DOUYIN_MAIN_ACTIVITY) return
+        if (windowClassName.isBlank()) return
+        if (!ScreenCaptureService.isRunning()) return
+
+        val fingerprint = "$packageName|$windowClassName"
+        if (fingerprint != lastPowerSaveFingerprint) {
+            lastPowerSaveFingerprint = fingerprint
+            recordDebugOperation("省电", "离开抖音推荐页，已停止截图识别服务")
+        }
+        ScreenCaptureService.stop(this)
     }
 
     private fun performSkipAction(action: WarningOverlayAction) {
@@ -657,14 +718,22 @@ class AccessibilityMonitorService : AccessibilityService() {
         HitRepository.recordOperationLog(this, action, message)
     }
 
+    private fun recordDebugOperation(action: String, message: String) {
+        if (HitRepository.isDebugModeEnabled(this)) {
+            recordOperation(action, message)
+        }
+    }
+
     private companion object {
         const val DOUYIN_PACKAGE_NAME = "com.ss.android.ugc.aweme"
         const val DOUYIN_MAIN_ACTIVITY = "com.ss.android.ugc.aweme.main.MainActivity"
-        const val OCR_MAX_ATTEMPTS = 4
-        const val OCR_SAMPLE_INTERVAL_MILLIS = 280L
-        const val OCR_SCAN_WINDOW_MILLIS = 2_200L
+        const val OCR_MAX_ATTEMPTS = 2
+        const val OCR_SAMPLE_INTERVAL_MILLIS = 320L
+        const val OCR_SCAN_WINDOW_MILLIS = 1_200L
         const val OCR_ACCEPTABLE_SCORE = 8
         const val OCR_GOOD_ENOUGH_SCORE = 10
+        const val SAME_CAPTION_SKIP_MILLIS = 4_000L
+        const val VIDEO_EVENT_CLUSTER_RESET_MILLIS = 1_200L
         const val CAPTION_TOP_RATIO = 0.60f
         const val CAPTION_BOTTOM_RATIO = 0.97f
         const val CAPTION_RIGHT_RATIO = 0.90f

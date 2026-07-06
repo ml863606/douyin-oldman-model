@@ -375,6 +375,8 @@ object HitRepository {
             .put("score", score)
             .put("source", source)
             .put("ocrDurationMillis", ocrDurationMillis ?: -1L)
+            .put("recognitionDurationMillis", recognitionDurationMillis ?: -1L)
+            .put("appearanceToRecognitionMillis", appearanceToRecognitionMillis ?: -1L)
     }
 
     private fun JSONObject.toRiskHit(): RiskHit {
@@ -391,6 +393,8 @@ object HitRepository {
             score = optInt("score"),
             source = optString("source", "未知"),
             ocrDurationMillis = optLong("ocrDurationMillis", -1L).takeIf { it >= 0L },
+            recognitionDurationMillis = optLong("recognitionDurationMillis", -1L).takeIf { it >= 0L },
+            appearanceToRecognitionMillis = optLong("appearanceToRecognitionMillis", -1L).takeIf { it >= 0L },
         )
     }
 
@@ -409,6 +413,8 @@ object HitRepository {
             .put("rawText", rawText)
             .put("source", source)
             .put("ocrDurationMillis", ocrDurationMillis ?: -1L)
+            .put("recognitionDurationMillis", recognitionDurationMillis ?: -1L)
+            .put("appearanceToRecognitionMillis", appearanceToRecognitionMillis ?: -1L)
     }
 
     private fun OperationLog.toJson(): JSONObject {
@@ -446,6 +452,8 @@ object HitRepository {
             rawText = optString("rawText"),
             source = optString("source", "未知"),
             ocrDurationMillis = optLong("ocrDurationMillis", -1L).takeIf { it >= 0L },
+            recognitionDurationMillis = optLong("recognitionDurationMillis", -1L).takeIf { it >= 0L },
+            appearanceToRecognitionMillis = optLong("appearanceToRecognitionMillis", -1L).takeIf { it >= 0L },
         )
     }
 

@@ -187,17 +187,19 @@ private fun AppScreen() {
         refreshState()
         while (true) {
             delay(1_000)
-            hits = HitRepository.getHits(context)
-            videoLogs = HitRepository.getVideoLogs(context)
-            operationLogs = HitRepository.getOperationLogs(context)
-            customRules = HitRepository.getCustomRules(context)
-            monitorTargets = context.loadMonitorTargets()
-            alertAction = HitRepository.getAlertAction(context)
-            alertSize = HitRepository.getAlertSize(context)
-            recognitionMode = HitRepository.getRecognitionMode(context)
-            warningFontSize = HitRepository.getWarningFontSize(context)
-            debugModeEnabled = HitRepository.isDebugModeEnabled(context)
-            batteryOptimized = !context.isIgnoringBatteryOptimizations()
+            if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                hits = HitRepository.getHits(context)
+                videoLogs = HitRepository.getVideoLogs(context)
+                operationLogs = HitRepository.getOperationLogs(context)
+                customRules = HitRepository.getCustomRules(context)
+                monitorTargets = context.loadMonitorTargets()
+                alertAction = HitRepository.getAlertAction(context)
+                alertSize = HitRepository.getAlertSize(context)
+                recognitionMode = HitRepository.getRecognitionMode(context)
+                warningFontSize = HitRepository.getWarningFontSize(context)
+                debugModeEnabled = HitRepository.isDebugModeEnabled(context)
+                batteryOptimized = !context.isIgnoringBatteryOptimizations()
+            }
         }
     }
 
@@ -1041,7 +1043,12 @@ fun HitCard(hit: RiskHit) {
                 style = MaterialTheme.typography.bodySmall,
             )
             Text(
-                text = "OCR识别耗时：${hit.ocrDurationMillis.ocrDurationLabel()}",
+                text = "${hit.source.recognitionDurationTitle()}：${recognitionDurationLabel(hit.source, hit.recognitionDurationMillis, hit.ocrDurationMillis)}",
+                color = Color(0xFF94A3B8),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = "出文案耗时：${durationLabel(hit.appearanceToRecognitionMillis)}",
                 color = Color(0xFF94A3B8),
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -1112,7 +1119,12 @@ fun VideoLogCard(log: ParsedVideoLog) {
                 )
             }
             Text(
-                text = "OCR识别耗时：${log.ocrDurationMillis.ocrDurationLabel()}",
+                text = "${log.source.recognitionDurationTitle()}：${recognitionDurationLabel(log.source, log.recognitionDurationMillis, log.ocrDurationMillis)}",
+                color = Color(0xFF94A3B8),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = "出文案耗时：${durationLabel(log.appearanceToRecognitionMillis)}",
                 color = Color(0xFF94A3B8),
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -1176,11 +1188,28 @@ private fun String.recognitionRangeLabel(): String {
     }
 }
 
-private fun Long?.ocrDurationLabel(): String {
-    return if (this == null) {
-        "未使用 OCR"
+private fun String.recognitionDurationTitle(): String {
+    return when {
+        contains("OCR", ignoreCase = true) -> "OCR识别耗时"
+        contains("无障碍") -> "无障碍识别耗时"
+        else -> "识别耗时"
+    }
+}
+
+private fun recognitionDurationLabel(source: String, durationMillis: Long?, fallbackOcrDurationMillis: Long?): String {
+    val duration = durationMillis ?: fallbackOcrDurationMillis
+    return if (duration == null) {
+        if (source.contains("OCR", ignoreCase = true)) "未记录 OCR 耗时" else "未记录"
     } else {
-        String.format(java.util.Locale.US, "%.2f 秒", this / 1000.0)
+        durationLabel(duration)
+    }
+}
+
+private fun durationLabel(durationMillis: Long?): String {
+    return if (durationMillis == null) {
+        "未记录"
+    } else {
+        String.format(java.util.Locale.US, "%.2f 秒", durationMillis / 1000.0)
     }
 }
 

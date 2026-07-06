@@ -8,7 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import org.json.JSONArray
 
 private const val DATABASE_NAME = "ai_tool_logs.db"
-private const val DATABASE_VERSION = 3
+private const val DATABASE_VERSION = 5
 private const val RETENTION_DAYS = 7L
 private const val RETENTION_MILLIS = RETENTION_DAYS * 24L * 60L * 60L * 1000L
 
@@ -26,6 +26,8 @@ class LogDatabase private constructor(context: Context) :
                 score INTEGER NOT NULL,
                 source TEXT NOT NULL,
                 ocr_duration_millis INTEGER,
+                recognition_duration_millis INTEGER,
+                appearance_to_recognition_millis INTEGER,
                 fingerprint TEXT NOT NULL UNIQUE
             )
             """.trimIndent(),
@@ -45,6 +47,8 @@ class LogDatabase private constructor(context: Context) :
                 raw_text TEXT NOT NULL,
                 source TEXT NOT NULL,
                 ocr_duration_millis INTEGER,
+                recognition_duration_millis INTEGER,
+                appearance_to_recognition_millis INTEGER,
                 fingerprint TEXT NOT NULL UNIQUE
             )
             """.trimIndent(),
@@ -70,6 +74,14 @@ class LogDatabase private constructor(context: Context) :
         }
         if (oldVersion < 3) {
             db.execSQL("ALTER TABLE video_logs ADD COLUMN author TEXT NOT NULL DEFAULT ''")
+        }
+        if (oldVersion < 4) {
+            db.execSQL("ALTER TABLE risk_hits ADD COLUMN recognition_duration_millis INTEGER")
+            db.execSQL("ALTER TABLE video_logs ADD COLUMN recognition_duration_millis INTEGER")
+        }
+        if (oldVersion < 5) {
+            db.execSQL("ALTER TABLE risk_hits ADD COLUMN appearance_to_recognition_millis INTEGER")
+            db.execSQL("ALTER TABLE video_logs ADD COLUMN appearance_to_recognition_millis INTEGER")
         }
     }
 
@@ -216,6 +228,8 @@ class LogDatabase private constructor(context: Context) :
             put("score", score)
             put("source", source)
             putNullableLong("ocr_duration_millis", ocrDurationMillis)
+            putNullableLong("recognition_duration_millis", recognitionDurationMillis)
+            putNullableLong("appearance_to_recognition_millis", appearanceToRecognitionMillis)
             put("fingerprint", text.take(80))
         }
     }
@@ -233,6 +247,8 @@ class LogDatabase private constructor(context: Context) :
             put("raw_text", rawText)
             put("source", source)
             putNullableLong("ocr_duration_millis", ocrDurationMillis)
+            putNullableLong("recognition_duration_millis", recognitionDurationMillis)
+            putNullableLong("appearance_to_recognition_millis", appearanceToRecognitionMillis)
             put("fingerprint", (packageName + title + content + tags.joinToString()).take(160))
         }
     }
@@ -255,6 +271,8 @@ class LogDatabase private constructor(context: Context) :
             score = getInt(column("score")),
             source = getString(column("source")).orEmpty(),
             ocrDurationMillis = getNullableLong("ocr_duration_millis"),
+            recognitionDurationMillis = getNullableLong("recognition_duration_millis"),
+            appearanceToRecognitionMillis = getNullableLong("appearance_to_recognition_millis"),
         )
     }
 
@@ -271,6 +289,8 @@ class LogDatabase private constructor(context: Context) :
             rawText = getString(column("raw_text")).orEmpty(),
             source = getString(column("source")).orEmpty(),
             ocrDurationMillis = getNullableLong("ocr_duration_millis"),
+            recognitionDurationMillis = getNullableLong("recognition_duration_millis"),
+            appearanceToRecognitionMillis = getNullableLong("appearance_to_recognition_millis"),
         )
     }
 

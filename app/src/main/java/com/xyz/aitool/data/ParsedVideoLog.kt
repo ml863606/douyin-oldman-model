@@ -12,4 +12,6 @@ data class ParsedVideoLog(
     val rawText: String,
     val source: String,
     val ocrDurationMillis: Long? = null,
+    val recognitionDurationMillis: Long? = null,
+    val appearanceToRecognitionMillis: Long? = null,
 )
